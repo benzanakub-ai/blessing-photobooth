@@ -11,7 +11,7 @@
         h1 { font-size: 2rem; letter-spacing: 2px; color: #ffffff; text-transform: uppercase; }
         p { color: #9ca3af; margin-top: 6px; font-size: 0.95rem; }
         
-        .gallery-grid { column-count: 4; column-gap: 16px; max-width: 1300px; margin: 0 auto; }
+        .gallery-grid { column-count: 4; column-gap: 16px; max-width: 1300px; margin: 0 auto; transition: all 0.3s; }
         @media (max-width: 1024px) { .gallery-grid { column-count: 3; } }
         @media (max-width: 640px) { .gallery-grid { column-count: 2; column-gap: 10px; } }
 
@@ -22,6 +22,8 @@
         
         .download-btn { background: #38bdf8; color: #000; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 0.9rem; font-weight: 800; display: inline-block; width: 100%; text-align: center; transition: 0.2s; }
         .download-btn:hover { background: #0ea5e9; color: #fff; }
+        
+        .empty-state { text-align: center; color: #9ca3af; padding: 60px 20px; font-size: 1.1rem; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -31,13 +33,14 @@
     </div>
 
     <div class="gallery-grid" id="gallery-container">
-        <div style="text-align: center; grid-column: 1/-1; color: #9ca3af; padding: 40px;">กำลังโหลดรูปภาพ...</div>
+        <div class="empty-state" style="column-span: all;">กำลังโหลดรูปภาพ...</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
+        // ใช้ Config โปรเจกต์ Blessing Photobooth (ตัวเดียวกับ Admin)
         const firebaseConfig = {
             apiKey: "AIzaSyCD_M_Pr4bXW111beYM6-i6uT-SzubZ1OA",
             authDomain: "blessing-photobooth.firebaseapp.com",
@@ -51,16 +54,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ดึงข้อมูล Collection: photobooth_photos แบบเรียลไทม์
+        // ดึงข้อมูลรูปภาพ
         const q = query(collection(db, "photobooth_photos"), orderBy("createdAt", "desc"), limit(60));
         
         onSnapshot(q, (snapshot) => {
             const container = document.getElementById('gallery-container');
             if (snapshot.empty) {
-                container.innerHTML = `<div style="text-align:center; color:#9ca3af; width:100%; padding: 40px;">ยังไม่มีภาพถ่ายในระบบ<br>(ลองถ่ายรูปที่ตู้ 1 ครั้ง รูปจะขึ้นมาแสดงทันที)</div>`;
+                container.style.columnCount = "1"; // บังคับให้เป็น 1 คอลัมน์ตอนไม่มีรูป
+                container.innerHTML = `<div class="empty-state">ยังไม่มีภาพถ่ายในระบบ<br>(ลองถ่ายรูปที่ตู้ 1 ครั้ง รูปจะขึ้นมาแสดงทันที)</div>`;
                 return;
             }
 
+            container.style.columnCount = ""; // คืนค่าคอลัมน์ปกติ
             container.innerHTML = "";
             snapshot.forEach(docSnap => {
                 const data = docSnap.data();
@@ -76,6 +81,11 @@
                 `;
                 container.appendChild(card);
             });
+        }, (error) => {
+            console.error("Firebase Error:", error);
+            const container = document.getElementById('gallery-container');
+            container.style.columnCount = "1";
+            container.innerHTML = `<div class="empty-state" style="color: #ef4444;">ไม่สามารถเชื่อมต่อฐานข้อมูลได้<br>โปรดรีเฟรชหน้าเว็บอีกครั้ง</div>`;
         });
     </script>
 </body>
