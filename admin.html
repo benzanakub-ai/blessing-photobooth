@@ -3,60 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLESSING PHOTOBOOTH - Admin</title>
+    <title>ADMIN - Blessing Photobooth</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: #0f172a; color: #f8fafc; padding: 30px 20px; }
-        .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
-        .card { background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; }
-        h1 { font-size: 1.8rem; margin-bottom: 8px; color: #38bdf8; }
-        h2 { font-size: 1.2rem; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        body { background: #0f0f11; color: #f3f4f6; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* PIN Overlay */
+        #pin-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f11; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s; }
+        .pin-box { background: #1a1a1e; padding: 40px; border-radius: 16px; border: 1px solid #2a2a30; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .pin-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; color: #38bdf8; letter-spacing: 2px; }
+        .pin-input { font-size: 2rem; padding: 10px; width: 200px; text-align: center; letter-spacing: 10px; background: #0a0a0c; border: 2px solid #333; color: white; border-radius: 8px; margin-bottom: 20px; outline: none; }
+        .pin-input:focus { border-color: #38bdf8; }
+        .btn-pin { background: #38bdf8; color: #000; font-weight: bold; padding: 12px 30px; font-size: 1.1rem; border: none; border-radius: 8px; cursor: pointer; width: 100%; }
+
+        /* Dashboard Layout */
+        #dashboard { display: none; width: 100%; height: 100%; }
+        .sidebar { width: 340px; background: #131316; border-right: 1px solid #26262b; display: flex; flex-direction: column; overflow-y: auto; }
+        .main-content { flex: 1; display: flex; flex-direction: column; background: #0a0a0c; overflow-y: auto; padding: 24px; }
+        
+        /* Topbar in Sidebar */
+        .brand-header { padding: 24px; font-size: 1.2rem; font-weight: 900; color: #38bdf8; border-bottom: 1px solid #26262b; display: flex; align-items: center; justify-content: space-between; }
+        .lock-btn { background: #26262b; border: none; color: #ef4444; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+        
+        /* Panel Styles */
+        .panel { padding: 20px 24px; border-bottom: 1px solid #26262b; }
+        .panel-title { font-size: 0.85rem; color: #9ca3af; font-weight: 800; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        
+        /* Forms & Inputs */
         .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 0.9rem; color: #94a3b8; font-weight: 600; }
-        input[type="text"], input[type="file"] { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 8px; width: 100%; }
-        .btn { background: #0284c7; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        label { font-size: 0.8rem; color: #94a3b8; font-weight: 600; }
+        input[type="text"], input[type="file"] { background: #0a0a0c; border: 1px solid #333; color: #fff; padding: 10px 12px; border-radius: 6px; width: 100%; font-size: 0.9rem; }
+        .btn { background: #0284c7; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 0.9rem; width: 100%; }
         .btn:hover { background: #0369a1; }
-        .btn-danger { background: #ef4444; }
-        .btn-danger:hover { background: #dc2626; }
-        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-top: 16px; }
-        .item-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .preview-box { width: 100%; height: 260px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .preview-box img { width: 100%; height: 100%; object-fit: contain; }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; }
+        .btn-danger:hover { background: #ef4444; color: white; }
+
+        /* Template List */
+        .tpl-list { display: flex; flex-direction: column; gap: 12px; }
+        .tpl-item { background: #1a1a1e; border: 1px solid #333; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .tpl-preview { width: 100%; height: 120px; background: #000; border-radius: 4px; object-fit: contain; }
+        .tpl-name { font-size: 0.85rem; text-align: center; font-weight: bold; }
+
+        /* Live Gallery Header */
+        .gallery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #26262b; }
+        .gallery-title { font-size: 1.2rem; font-weight: 800; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .live-badge { background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: bold; border: 1px solid #10b981; }
+        
+        /* Gallery Grid */
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .photo-card { background: #131316; border: 1px solid #26262b; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; }
+        .photo-card:hover { border-color: #38bdf8; transform: translateY(-4px); }
+        .photo-img { width: 100%; height: 280px; object-fit: contain; background: #000; border-bottom: 1px solid #26262b; }
+        .photo-info { padding: 12px; font-size: 0.75rem; color: #9ca3af; display: flex; justify-content: space-between; align-items: center; }
+        .photo-actions { display: flex; padding: 0 12px 12px; gap: 8px; }
+        .action-btn { flex: 1; background: #1a1a1e; border: 1px solid #333; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; }
+        .action-btn:hover { background: #2a2a30; border-color: #fff; }
+        .action-btn.del:hover { background: #ef4444; border-color: #ef4444; }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <div>
-            <h1>BLESSING PHOTOBOOTH</h1>
-            <p style="color: #94a3b8;">ระบบจัดการหลังบ้าน (2x6 Strips & 4x6 Prints)</p>
+    <!-- PIN Overlay -->
+    <div id="pin-overlay">
+        <div class="pin-box">
+            <div class="pin-title">ADMIN LOGIN</div>
+            <input type="password" id="pin-input" class="pin-input" maxlength="4" placeholder="••••">
+            <button class="btn-pin" id="btn-login">เข้าสู่ระบบ</button>
+            <p id="pin-error" style="color: #ef4444; margin-top: 12px; font-size: 0.9rem; display: none;">รหัส PIN ไม่ถูกต้อง!</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="brand-header">
+                BLESSING PHOTOBOOTH
+                <button class="lock-btn" id="btn-logout">🔒 ล็อก</button>
+            </div>
+
+            <!-- Video Ad Config -->
+            <div class="panel">
+                <div class="panel-title">⚙️ SYSTEM CONFIG</div>
+                <div class="form-group">
+                    <label>ลิงก์วิดีโอโฆษณา (MP4) สำหรับหน้าพักจอ</label>
+                    <input type="text" id="ad-video-url" placeholder="https://.../video.mp4">
+                </div>
+                <button class="btn" id="save-config-btn" style="background: #10b981;">บันทึกการตั้งค่า</button>
+                <span id="config-status" style="color: #10b981; font-size: 0.8rem; display: block; margin-top: 8px;"></span>
+            </div>
+
+            <!-- Template Manager -->
+            <div class="panel">
+                <div class="panel-title">🖼️ TEMPLATE MANAGER</div>
+                <div class="form-group">
+                    <label>ตั้งชื่อเทมเพลต</label>
+                    <input type="text" id="tpl-name" placeholder="เช่น Wedding 2x6">
+                </div>
+                <div class="form-group">
+                    <label>อัปโหลดกรอบใหม่ (.PNG เจาะใส)</label>
+                    <input type="file" id="tpl-file" accept="image/png, image/jpeg">
+                </div>
+                <button class="btn" id="upload-tpl-btn">☁️ อัปโหลดเข้าตู้</button>
+                <span id="upload-status" style="color: #38bdf8; font-size: 0.8rem; display: block; margin-top: 8px;"></span>
+                
+                <hr style="border: 0; border-top: 1px solid #26262b; margin: 20px 0;">
+                
+                <label style="margin-bottom: 10px; display: block;">กรอบที่ใช้งานอยู่</label>
+                <div class="tpl-list" id="tpl-list">กำลังโหลดรายการ...</div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2>เพิ่มเทมเพลตกรอบรูปใหม่</h2>
-            <div class="form-group">
-                <label>ชื่อเทมเพลต</label>
-                <input type="text" id="tpl-name" placeholder="เช่น Wedding Gold 2x6 หรือ Classic 4x6">
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="gallery-header">
+                <div class="gallery-title">
+                    📸 LIVE CLIENT GALLERY
+                    <span class="live-badge">● LIVE SYNC</span>
+                </div>
+                <div style="font-size: 0.9rem; color: #9ca3af;">จำนวนรูป: <span id="photo-count" style="color: #fff; font-weight: bold;">0</span></div>
             </div>
-            <div class="form-group">
-                <label>เลือกไฟล์รูปภาพเทมเพลต (PNG/JPG เจาะสีมาร์กเกอร์)</label>
-                <input type="file" id="tpl-file" accept="image/*">
+            
+            <div class="gallery-grid" id="gallery-grid">
+                <div style="color: #666; width: 100%; text-align: center; grid-column: 1/-1; padding: 40px;">รอโหลดรูปภาพจากระบบ...</div>
             </div>
-            <button class="btn" id="upload-tpl-btn">อัปโหลดเทมเพลต</button>
-            <span id="upload-status" style="margin-left: 12px; font-size: 0.9rem; color: #38bdf8;"></span>
-        </div>
-
-        <div class="card">
-            <h2>รายการเทมเพลตในระบบ</h2>
-            <div class="template-grid" id="tpl-list">กำลังโหลดรายการ...</div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-        // ใส่ Firebase Config ของจริง
+        // Firebase Config ของโปรเจกต์
         const firebaseConfig = {
             apiKey: "AIzaSyA57qyFTexeNyRMTTLUJMNC5Bm24L_K0io",
             authDomain: "blessing-snap.firebaseapp.com",
@@ -73,38 +152,74 @@
 
         let settings = { themes: [], ads: [], adVideoUrl: "" };
 
-        async function loadConfig() {
+        // --- ระบบ PIN ---
+        const ADMIN_PIN = "1234"; // เปลี่ยนรหัส PIN ตรงนี้ได้เลย
+        
+        document.getElementById('btn-login').addEventListener('click', () => {
+            const input = document.getElementById('pin-input').value;
+            if (input === ADMIN_PIN) {
+                document.getElementById('pin-overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('pin-overlay').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'flex';
+                    initAdmin();
+                }, 300);
+            } else {
+                document.getElementById('pin-error').style.display = 'block';
+            }
+        });
+        
+        document.getElementById('pin-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') document.getElementById('btn-login').click();
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            document.getElementById('pin-input').value = "";
+            document.getElementById('pin-error').style.display = 'none';
+            document.getElementById('pin-overlay').style.display = 'flex';
+            setTimeout(() => document.getElementById('pin-overlay').style.opacity = '1', 10);
+            document.getElementById('dashboard').style.display = 'none';
+        });
+
+        // --- ระบบตั้งค่า & อัปโหลดเทมเพลต ---
+        async function initAdmin() {
             try {
                 const snap = await getDoc(doc(db, "config", "settings"));
                 if (snap.exists()) {
                     settings = snap.data();
+                    if(!settings.themes) settings.themes = [];
+                    document.getElementById('ad-video-url').value = settings.adVideoUrl || "";
                     renderTemplates();
-                } else {
-                    document.getElementById('tpl-list').innerHTML = 'ยังไม่มีเทมเพลตในระบบ';
                 }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('tpl-list').innerHTML = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
-            }
+                subscribeToLiveGallery();
+            } catch (err) { console.error(err); }
         }
+
+        document.getElementById('save-config-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('save-config-btn');
+            const status = document.getElementById('config-status');
+            btn.textContent = "กำลังบันทึก...";
+            settings.adVideoUrl = document.getElementById('ad-video-url').value;
+            await setDoc(doc(db, "config", "settings"), settings);
+            btn.textContent = "บันทึกการตั้งค่า";
+            status.textContent = "✔ บันทึกวิดีโอสำเร็จ (หน้าตู้จะอัปเดตอัตโนมัติ)";
+            setTimeout(() => status.textContent = "", 3000);
+        });
 
         function renderTemplates() {
             const list = document.getElementById('tpl-list');
             list.innerHTML = "";
-            if (!settings.themes || settings.themes.length === 0) {
-                list.innerHTML = "ยังไม่มีเทมเพลต";
-                return;
-            }
+            if (settings.themes.length === 0) { list.innerHTML = "<div style='color:#666; font-size:0.8rem;'>ยังไม่มีกรอบรูป</div>"; return; }
 
             settings.themes.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'item-card';
+                const card = document.createElement('div'); card.className = 'tpl-item';
                 card.innerHTML = `
-                    <div class="preview-box">
-                        <img src="${item.url}">
+                    <div style="font-size:0.8rem; color:#9ca3af; display:flex; justify-content:space-between;">
+                        <span>กรอบที่ ${index + 1}</span>
                     </div>
-                    <div style="font-weight:bold; font-size:0.85rem; text-align:center;">${item.name}</div>
-                    <button class="btn btn-danger" style="width:100%; padding:6px; font-size:0.8rem;" data-index="${index}">ลบเทมเพลต</button>
+                    <img src="${item.url}" class="tpl-preview">
+                    <div class="tpl-name">${item.name || 'ไม่มีชื่อ'}</div>
+                    <button class="btn btn-danger" style="padding:6px; font-size:0.8rem;" data-index="${index}">🗑 ลบทิ้ง</button>
                 `;
                 card.querySelector('button').addEventListener('click', () => deleteTemplate(index));
                 list.appendChild(card);
@@ -112,7 +227,7 @@
         }
 
         async function deleteTemplate(index) {
-            if (!confirm("ต้องการลบเทมเพลตนี้ใช่หรือไม่?")) return;
+            if (!confirm("ต้องการลบกรอบรูปนี้ใช่หรือไม่?")) return;
             settings.themes.splice(index, 1);
             await setDoc(doc(db, "config", "settings"), settings);
             renderTemplates();
@@ -123,35 +238,103 @@
             const fileInput = document.getElementById('tpl-file');
             const status = document.getElementById('upload-status');
 
-            if (!nameInput.value || fileInput.files.length === 0) {
-                return alert("กรุณาระบุชื่อและเลือกไฟล์ภาพ");
-            }
-
+            if (!nameInput.value || fileInput.files.length === 0) return alert("กรุณาระบุชื่อและเลือกไฟล์ภาพ");
+            
             const file = fileInput.files[0];
-            status.textContent = "กำลังอัปโหลด...";
+            status.textContent = "กำลังอัปโหลด กรุณารอ...";
 
             try {
                 const fileRef = ref(storage, `templates/${Date.now()}_${file.name}`);
                 await uploadBytes(fileRef, file);
                 const downloadUrl = await getDownloadURL(fileRef);
 
-                if (!settings.themes) settings.themes = [];
                 settings.themes.push({ name: nameInput.value, url: downloadUrl });
-
                 await setDoc(doc(db, "config", "settings"), settings);
 
-                status.textContent = "สำเร็จ!";
-                nameInput.value = "";
-                fileInput.value = "";
+                status.textContent = "✔ อัปโหลดสำเร็จ!";
+                nameInput.value = ""; fileInput.value = "";
                 renderTemplates();
                 setTimeout(() => status.textContent = "", 3000);
-            } catch (err) {
-                console.error(err);
-                status.textContent = "อัปโหลดล้มเหลว";
-            }
+            } catch (err) { status.textContent = "อัปโหลดล้มเหลว"; }
         });
 
-        loadConfig();
+        // --- ระบบ LIVE GALLERY (ดึงข้อมูลแบบ Real-time) ---
+        function subscribeToLiveGallery() {
+            const q = query(collection(db, "photobooth_photos"), orderBy("createdAt", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                const grid = document.getElementById('gallery-grid');
+                document.getElementById('photo-count').textContent = snapshot.size;
+                
+                if (snapshot.empty) {
+                    grid.innerHTML = "<div style='color: #666; width: 100%; text-align: center; grid-column: 1/-1; padding: 40px;'>ยังไม่มีภาพถ่ายในระบบ</div>";
+                    return;
+                }
+
+                grid.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const docId = docSnap.id;
+                    const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+                    const timeStr = dateObj.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+                    
+                    const card = document.createElement('div');
+                    card.className = 'photo-card';
+                    card.innerHTML = `
+                        <img src="${data.url}" class="photo-img">
+                        <div class="photo-info">
+                            <span>รหัส: ${docId.substring(0,6)}</span>
+                            <span>เวลา: ${timeStr} น.</span>
+                        </div>
+                        <div class="photo-actions">
+                            <button class="action-btn" onclick="printImage('${data.url}')">🖨 พิมพ์</button>
+                            <button class="action-btn" onclick="downloadImage('${data.url}')">⬇ โหลด</button>
+                            <button class="action-btn del" onclick="deletePhoto('${docId}')">🗑</button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            });
+        }
+
+        // ฟังก์ชันสั่ง Print ข้ามหน้าต่าง
+        window.printImage = function(url) {
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <html><head><title>Print Blessing Photobooth</title>
+                <style>
+                    @page { margin: 0; }
+                    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #fff; }
+                    img { max-width: 100%; max-height: 100%; object-fit: contain; }
+                </style>
+                </head><body>
+                <img src="${url}" onload="window.print(); window.close();">
+                </body></html>
+            `);
+            printWin.document.close();
+        };
+
+        // ฟังก์ชัน Download รูป
+        window.downloadImage = async function(url) {
+            try {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `blessing-photobooth-${Date.now()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch(e) { window.open(url, '_blank'); }
+        };
+
+        // ฟังก์ชันลบรูป (ลบเรคคอร์ดจาก Database)
+        window.deletePhoto = async function(docId) {
+            if(confirm("ต้องการลบรูปนี้ออกจากแกลเลอรีใช่หรือไม่?")) {
+                await deleteDoc(doc(db, "photobooth_photos", docId));
+            }
+        };
+
     </script>
 </body>
 </html>
