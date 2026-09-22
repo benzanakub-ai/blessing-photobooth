@@ -56,14 +56,15 @@
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-        // 👉 ใส่ Firebase Config ของโปรเจกต์ใหม่ที่นี่
+        // ใส่ Firebase Config ของจริง
         const firebaseConfig = {
-            apiKey: "YOUR_NEW_API_KEY",
-            authDomain: "YOUR_NEW_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_NEW_PROJECT_ID",
-            storageBucket: "YOUR_NEW_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "YOUR_NEW_SENDER_ID",
-            appId: "YOUR_NEW_APP_ID"
+            apiKey: "AIzaSyA57qyFTexeNyRMTTLUJMNC5Bm24L_K0io",
+            authDomain: "blessing-snap.firebaseapp.com",
+            projectId: "blessing-snap",
+            storageBucket: "blessing-snap.firebasestorage.app",
+            messagingSenderId: "324842012527",
+            appId: "1:324842012527:web:96a235fbf494d39ce9f29a",
+            measurementId: "G-8H8D35R54J"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -83,6 +84,7 @@
                 }
             } catch (err) {
                 console.error(err);
+                document.getElementById('tpl-list').innerHTML = 'เกิดข้อผิดพลาดในการโหลดข้อมูล';
             }
         }
 
