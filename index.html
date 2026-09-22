@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BLESSING SNAP - Photobooth</title>
+    <title>BLESSING PHOTOBOOTH</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -21,7 +21,6 @@
         .btn-secondary:hover { background: #2a2a2a; border-color: var(--accent-white); }
         
         .brand-header { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; letter-spacing: 6px; font-size: 1.2rem; font-weight: 900; color: var(--accent-white); z-index: 20; text-transform: uppercase; pointer-events: none; }
-        .brand-badge { background: var(--accent-white); color: #000; padding: 2px 6px; font-size: 0.7rem; border-radius: 3px; font-weight: 900; }
         
         .ad-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; pointer-events: none; }
         .ad-video { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; filter: brightness(0.65) contrast(1.1); pointer-events: none; }
@@ -58,11 +57,6 @@
         video#webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); pointer-events: none; }        
         
         .guide-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 3px dashed rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55); pointer-events: none; z-index: 20; transition: all 0.3s ease; }
-
-        .filter-bw-classic { filter: grayscale(100%) contrast(140%) brightness(118%); }
-        .filter-bw-noir { filter: grayscale(100%) contrast(160%) brightness(85%); }
-        .filter-bw-soft { filter: grayscale(100%) contrast(95%) brightness(110%); }
-        .filter-color { filter: brightness(105%) contrast(102%); }
         
         .countdown-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 25; opacity: 0; visibility: hidden; }
         .countdown-overlay.active { opacity: 1; visibility: visible; }
@@ -72,10 +66,6 @@
         @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
         
         .camera-panel { width: 320px; background: var(--surface-color); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 20px; }
-        .filter-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .filter-btn { background: #1e1e1e; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; transition: 0.2s;}
-        .filter-btn:hover { background: #333; }
-        .filter-btn.active { background: #fff; color: #000; font-weight: bold;}
         .shots-status { display: flex; gap: 10px; flex-wrap: wrap; }
         .shot-badge { flex: 1; min-width: 40px; height: 40px; background: #1a1a1a; border: 1px dashed #444; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #666; font-weight: bold;}
         .shot-badge.captured { background: #fff; color: #000; border-style: solid; }
@@ -111,7 +101,6 @@
 
         @media (max-width: 850px) { .camera-workspace { flex-direction: column; } .result-container { flex-direction: column; } }
         
-        /* แก้ไขหน้ากระดาษพิมพ์ให้รองรับ DNP 4x6 นิ้ว (ไร้ขอบ) */
         @media print {
             @page { size: 4in 6in portrait; margin: 0; }
             html, body { width: 4in !important; height: 6in !important; margin: 0 !important; padding: 0 !important; background: #ffffff !important; overflow: hidden !important; }
@@ -119,14 +108,12 @@
             #screen-3, .result-overlay, .result-container, .canvas-preview-wrapper, .canvas-inner-wrapper { display: block !important; position: static !important; width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; opacity: 1 !important; visibility: visible !important; }
             .camera-workspace, .result-actions, .section-title, #retake-buttons-container, #back-to-templates-btn { display: none !important; }
             canvas#strip-canvas { display: none !important; } 
-            
-            /* Print Canvas จะถูกบังคับให้พอดีกับกระดาษ 4x6 เสมอ */
             canvas#print-canvas { display: block !important; visibility: visible !important; width: 4in !important; height: 6in !important; object-fit: fill !important; position: fixed !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 0 !important; }
         }
     </style>
 </head>
 <body>
-    <div class="brand-header">BLESSING SNAP <span class="brand-badge">B&W</span></div>
+    <div class="brand-header">BLESSING PHOTOBOOTH</div>
 
     <section id="screen-1" class="screen active">
         <div class="ad-container">
@@ -135,7 +122,7 @@
             <img id="ad-img-2" class="ad-slideshow-img" src="">
         </div>
         <div class="idle-overlay" id="idle-overlay-box">
-            <div class="idle-title">BLESSING SNAP</div>
+            <div class="idle-title">BLESSING PHOTOBOOTH</div>
             <div class="idle-subtitle">Chroma Color Photobooth</div>
             <div class="tap-prompt">TOUCH TO START / แตะเพื่อเริ่ม</div>
         </div>
@@ -162,7 +149,7 @@
         <button class="btn btn-secondary" id="back-to-templates-btn" style="position: absolute; top: 20px; left: 20px; width: auto; padding: 8px 18px; z-index: 30;">&larr; BACK</button>
         <div class="camera-workspace">
             <div class="viewfinder-container">
-                <video id="webcam" class="filter-color" autoplay playsinline muted></video>
+                <video id="webcam" autoplay playsinline muted></video>
                 <div id="camera-guide" class="guide-box" style="display: none;"></div>
                 <div class="countdown-overlay" id="countdown-overlay"><div class="countdown-number" id="countdown-number">5</div></div>
                 <div class="flash-screen" id="flash-screen"></div>
@@ -174,16 +161,6 @@
                     <select id="camera-select" style="width: 100%; background: #1e1e1e; border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; outline: none; cursor: pointer; appearance: auto;">
                         <option value="">กำลังค้นหากล้อง...</option>
                     </select>
-                </div>
-
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: 700; color: #888; margin-bottom: 6px; font-size: 0.75rem; letter-spacing: 1px;">🎨 PHOTO FILTER</div>
-                    <div class="filter-options">
-                        <button class="filter-btn" data-filter="bw-classic">B&W CLASSIC</button>
-                        <button class="filter-btn" data-filter="bw-noir">B&W NOIR</button>
-                        <button class="filter-btn" data-filter="bw-soft">B&W SOFT</button>
-                        <button class="filter-btn active" data-filter="color">COLOR</button>
-                    </div>
                 </div>
 
                 <div style="flex-grow: 1;">
@@ -203,7 +180,7 @@
         </div>
 
         <div class="result-overlay" id="result-overlay">
-            <div class="section-title" style="margin-bottom: 16px;">YOUR BLESSING SNAP PHOTO</div>
+            <div class="section-title" style="margin-bottom: 16px;">YOUR BLESSING PHOTOBOOTH</div>
             <div class="result-container">
                 <div class="canvas-preview-wrapper">
                     <div class="canvas-inner-wrapper">
@@ -282,9 +259,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             const state = { 
                 currentScreen: 1, selectedThemeUrl: null, totalShots: 3,         
-                activeTemplateInfo: null, // เก็บรหัสเทมเพลตที่กำลังใช้งาน (ขนาดกว้าง, สูง, เป็น 2x6 หรือไม่)
+                activeTemplateInfo: null,
                 activeLayout: [], processedOverlayCanvas: null, 
-                selectedFilter: 'color', 
                 capturedPhotos: [], isShooting: false, mediaStream: null,
                 videoDevices: [], currentDeviceId: null 
             };
@@ -422,7 +398,6 @@
                     if (url && !precomputedTemplates[url]) {
                         analyzeAndProcessTemplate(url).then(result => {
                             precomputedTemplates[url] = result;
-                            console.log(`[Precomputed]: ${url}`);
                         });
                     }
                 });
@@ -481,16 +456,12 @@
                 }
             }
 
-            // [อัปเดตใหม่] ระบบเช็คขนาดภาพอัตโนมัติ (2x6 หรือ 4x6)
             function analyzeAndProcessTemplate(imageSrc) {
                 return new Promise((resolve) => {
                     const img = new Image(); img.crossOrigin = "anonymous";
                     img.onload = () => {
-                        // ดึงขนาดจริงของไฟล์เทมเพลตที่อัปโหลดมา (เช่น 600x1800 หรือ 1200x1800)
                         const width = img.width; 
                         const height = img.height; 
-                        
-                        // วิเคราะห์ว่าเป็นแบบ 2x6 strip หรือไม่ (ถ้าความกว้างแคบกว่าความสูงเกิน 2.5 เท่า)
                         const isStrip = (width <= height / 2.5);
 
                         const canvas = document.createElement('canvas');
@@ -620,7 +591,7 @@
                     document.getElementById('loading-overlay').classList.remove('active');
                 }
                 
-                state.activeTemplateInfo = result; // บันทึกข้อมูลขนาดเทมเพลต
+                state.activeTemplateInfo = result; 
                 state.activeLayout = result.layout; 
                 state.processedOverlayCanvas = result.overlayCanvas;
                 state.totalShots = result.layout.length > 0 ? result.layout.length : 1;
@@ -633,13 +604,6 @@
             const countdownNumber = document.getElementById('countdown-number');
             const flashScreen = document.getElementById('flash-screen');
             const cameraSelect = document.getElementById('camera-select');
-
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-                    state.selectedFilter = btn.getAttribute('data-filter'); webcamElement.className = `filter-${state.selectedFilter}`; playBeep();
-                });
-            });
 
             async function populateCameras() {
                 try {
@@ -811,35 +775,8 @@
                 hiddenCanvas.width = webcamElement.videoWidth || 1920; 
                 hiddenCanvas.height = webcamElement.videoHeight || 1080; 
                 
+                // ดึงภาพจากกล้องลง Canvas โดยตรง (ไม่ผ่านการแปลงสี)
                 ctx.drawImage(webcamElement, 0, 0, hiddenCanvas.width, hiddenCanvas.height); 
-                
-                const imgData = ctx.getImageData(0, 0, hiddenCanvas.width, hiddenCanvas.height); 
-                const data = imgData.data;
-
-                for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i], g = data[i + 1], b = data[i + 2];
-
-                    if (state.selectedFilter !== 'color') {
-                        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
-                        
-                        if (state.selectedFilter === 'bw-classic') {
-                            gray = Math.pow(gray / 255, 0.85) * 255;
-                            gray = (gray - 128) * 1.3 + 138;
-                        } else if (state.selectedFilter === 'bw-noir') {
-                            gray = (gray - 128) * 1.55 + 115;
-                        } else if (state.selectedFilter === 'bw-soft') {
-                            gray = Math.pow(gray / 255, 0.8) * 255;
-                            gray = (gray - 128) * 0.95 + 140;
-                        }
-                        
-                        data[i] = data[i+1] = data[i+2] = Math.max(0, Math.min(255, gray));
-                    } else {
-                        data[i] = Math.min(255, r * 1.05 + 8);
-                        data[i + 1] = Math.min(255, g * 1.03 + 5);
-                        data[i + 2] = Math.min(255, b * 1.02 + 5);
-                    }
-                }
-                ctx.putImageData(imgData, 0, 0);
                 
                 const dataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
                 if (replaceIndex >= 0) {
@@ -872,7 +809,6 @@
             }
 
             function drawStripLayout(ctx, cleanCtx, stripCanvas, cleanCanvas, images) {
-                // ดึงความกว้าง ความสูง มาจากเทมเพลตที่ผู้ใช้เลือก (รับรองทั้ง 2x6 และ 4x6 อัตโนมัติ)
                 const width = state.activeTemplateInfo.width; 
                 const height = state.activeTemplateInfo.height; 
                 
@@ -949,8 +885,8 @@
                 try {
                     const dataUrl = stripCanvas.toDataURL('image/jpeg', 0.85);
                     const fileName = `photobooth_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-                    // เดิม: ref(storage, 'photos/' + fileName);
-                    // เปลี่ยนเป็น:
+                    
+                    // เปลี่ยนโฟลเดอร์เก็บไฟล์เป็น photobooth_photos เพื่อไม่ให้ปนกับระบบเดิม
                     const storageReference = ref(storage, 'photobooth_photos/' + fileName);
 
                     await uploadString(storageReference, dataUrl, 'data_url');
@@ -965,9 +901,8 @@
                         });
                         qrStatus.textContent = "สแกนเพื่อรับรูป";
 
-                        // เดิม: addDoc(collection(db, "photos"), { ... });
-                        // เปลี่ยนเป็น:
-                        await addDoc(collection(db, "photobooth_photos"), {
+                        // เปลี่ยนการเก็บลิงก์รูปลง collection 'photobooth_photos' แทน 'photos' เดิม
+                        await addDoc(collection(db, "photobooth_photos"), { 
                             url: downloadUrl, 
                             thumb_url: downloadUrl,
                             createdAt: serverTimestamp() 
@@ -990,13 +925,11 @@
                 if (printCopies < 6) { printCopies++; printCopiesElem.textContent = printCopies; playBeep(600, 0.05); }
             });
 
-            // [อัปเดตใหม่] ระบบสั่งพิมพ์สำหรับ DNP ผสม 2x6 และ 4x6 ได้อย่างลงตัว
             async function executePrint(btnElement) {
                 const cleanCanvas = document.getElementById('clean-canvas');
                 const printCanvas = document.getElementById('print-canvas');
                 const printCtx = printCanvas.getContext('2d');
                 
-                // สำหรับ DNP Canvas สั่งปริ้นจะต้องเป็น 4x6 (1200x1800) เสมอ
                 const printWidth = 1200;
                 const printHeight = 1800;
 
@@ -1006,14 +939,10 @@
                 printCtx.fillStyle = '#ffffff';
                 printCtx.fillRect(0, 0, printWidth, printHeight);
 
-                // ถ้าระบบเจอว่าเป็นกรอบผอมยาว (2x6 strip)
                 if (state.activeTemplateInfo.isStrip) {
-                    // วาดรูปครึ่งซ้าย
                     printCtx.drawImage(cleanCanvas, 0, 0, printWidth / 2, printHeight);
-                    // วาดรูปครึ่งขวาซ้ำกัน
                     printCtx.drawImage(cleanCanvas, printWidth / 2, 0, printWidth / 2, printHeight);
                 } else {
-                    // ถ้าระบบเจอว่าเป็นรูปกว้างปกติ (4x6) ก็วาดเต็มกรอบทีเดียว
                     printCtx.drawImage(cleanCanvas, 0, 0, printWidth, printHeight);
                 }
 
