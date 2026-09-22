@@ -67,7 +67,7 @@
         
         /* Gallery Grid */
         .gallery-scroll-area { flex: 1; overflow-y: auto; padding: 24px; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
         .photo-card { position: relative; background: #131316; border: 2px solid #26262b; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: 0.2s; }
         .photo-card.selected { border-color: #0ea5e9; box-shadow: 0 0 15px rgba(14, 165, 233, 0.4); }
         .photo-img { width: 100%; height: 260px; object-fit: contain; background: #000; border-bottom: 1px solid #26262b; cursor: pointer; }
@@ -77,13 +77,6 @@
         .photo-card.selected .check-overlay::after { content: "✓"; color: white; font-weight: bold; }
 
         .photo-info { padding: 12px; font-size: 0.75rem; color: #9ca3af; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* ปุ่ม Action สำหรับแต่ละรูป */
-        .photo-actions { display: flex; padding: 0 12px 12px; gap: 8px; }
-        .action-btn { flex: 1; background: #1a1a1e; border: 1px solid #333; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; }
-        .action-btn:hover { background: #2a2a30; border-color: #fff; }
-        .action-btn.del:hover { background: #ef4444; border-color: #ef4444; }
-
     </style>
 </head>
 <body>
@@ -189,14 +182,15 @@
         import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
+        // ใช้ Config โปรเจกต์เดิมตามที่เซ็ตไว้
         const firebaseConfig = {
-            apiKey: "AIzaSyCD_M_Pr4bXW111beYM6-i6uT-SzubZ1OA",
-            authDomain: "blessing-photobooth.firebaseapp.com",
-            projectId: "blessing-photobooth",
-            storageBucket: "blessing-photobooth.firebasestorage.app",
-            messagingSenderId: "477726732894",
-            appId: "1:477726732894:web:eb683a0b999868cd4bbacf",
-            measurementId: "G-P5Y8D2DN5D"
+            apiKey: "AIzaSyA57qyFTexeNyRMTTLUJMNC5Bm24L_K0io",
+            authDomain: "blessing-snap.firebaseapp.com",
+            projectId: "blessing-snap",
+            storageBucket: "blessing-snap.firebasestorage.app",
+            messagingSenderId: "324842012527",
+            appId: "1:324842012527:web:96a235fbf494d39ce9f29a",
+            measurementId: "G-8H8D35R54J"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -278,12 +272,13 @@
             
             document.getElementById('save-ad-order-btn').style.display = 'block';
 
+            // เปิดใช้งานระบบลากสลับตำแหน่ง
             new Sortable(list, {
                 animation: 150,
                 onEnd: function () {
                     const newOrder = [];
                     list.querySelectorAll('.ad-item').forEach(el => newOrder.push(el.getAttribute('data-id')));
-                    settings.ads = newOrder; 
+                    settings.ads = newOrder; // อัปเดต Array รอเซฟ
                 }
             });
         }
@@ -453,18 +448,12 @@
                 
                 const card = document.createElement('div');
                 card.className = `photo-card ${isSelected ? 'selected' : ''}`;
-                
                 card.innerHTML = `
                     <div class="check-overlay" onclick="toggleSelect('${photo.id}')"></div>
                     <img src="${photo.url}" class="photo-img" onclick="toggleSelect('${photo.id}')">
                     <div class="photo-info">
                         <span>${photo.dateStr}</span>
                         <span>${timeStr} น.</span>
-                    </div>
-                    <div class="photo-actions">
-                        <button class="action-btn" onclick="printImage('${photo.url}')">🖨 พิมพ์</button>
-                        <button class="action-btn" onclick="downloadImage('${photo.url}')">⬇ โหลด</button>
-                        <button class="action-btn del" onclick="deletePhoto('${photo.id}')">🗑</button>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -561,42 +550,6 @@
             btn.textContent = "🗑 ลบที่เลือก";
             alert("ลบรูปสำเร็จ");
         });
-
-        // --- ปุ่ม Action ของแต่ละรูป ---
-        window.printImage = function(url) {
-            const printWin = window.open('', '_blank');
-            printWin.document.write(`
-                <html><head><title>Print Blessing Photobooth</title>
-                <style>
-                    @page { margin: 0; }
-                    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #fff; }
-                    img { max-width: 100%; max-height: 100%; object-fit: contain; }
-                </style>
-                </head><body>
-                <img src="${url}" onload="window.print(); window.close();">
-                </body></html>
-            `);
-            printWin.document.close();
-        };
-
-        window.downloadImage = async function(url) {
-            try {
-                const res = await fetch(url);
-                const blob = await res.blob();
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `blessing-photobooth-${Date.now()}.jpg`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } catch(e) { window.open(url, '_blank'); }
-        };
-
-        window.deletePhoto = async function(docId) {
-            if(confirm("ต้องการลบรูปนี้ออกจากแกลเลอรีใช่หรือไม่?")) {
-                await deleteDoc(doc(db, "photobooth_photos", docId));
-            }
-        };
 
     </script>
 </body>
