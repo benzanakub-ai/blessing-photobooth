@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLESSING PHOTOBOOTH - Admin</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #0f172a; color: #f8fafc; padding: 30px 20px; }
+        .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+        .card { background: #1e293b; padding: 24px; border-radius: 16px; border: 1px solid #334155; }
+        h1 { font-size: 1.8rem; margin-bottom: 8px; color: #38bdf8; }
+        h2 { font-size: 1.2rem; margin-bottom: 16px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+        .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.9rem; color: #94a3b8; font-weight: 600; }
+        input[type="text"], input[type="file"] { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 12px; border-radius: 8px; width: 100%; }
+        .btn { background: #0284c7; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn:hover { background: #0369a1; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-top: 16px; }
+        .item-card { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .preview-box { width: 100%; height: 260px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .preview-box img { width: 100%; height: 100%; object-fit: contain; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <h1>BLESSING PHOTOBOOTH</h1>
+            <p style="color: #94a3b8;">ระบบจัดการหลังบ้าน (2x6 Strips & 4x6 Prints)</p>
+        </div>
+
+        <div class="card">
+            <h2>เพิ่มเทมเพลตกรอบรูปใหม่</h2>
+            <div class="form-group">
+                <label>ชื่อเทมเพลต</label>
+                <input type="text" id="tpl-name" placeholder="เช่น Wedding Gold 2x6 หรือ Classic 4x6">
+            </div>
+            <div class="form-group">
+                <label>เลือกไฟล์รูปภาพเทมเพลต (PNG/JPG เจาะสีมาร์กเกอร์)</label>
+                <input type="file" id="tpl-file" accept="image/*">
+            </div>
+            <button class="btn" id="upload-tpl-btn">อัปโหลดเทมเพลต</button>
+            <span id="upload-status" style="margin-left: 12px; font-size: 0.9rem; color: #38bdf8;"></span>
+        </div>
+
+        <div class="card">
+            <h2>รายการเทมเพลตในระบบ</h2>
+            <div class="template-grid" id="tpl-list">กำลังโหลดรายการ...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
+
+        // 👉 ใส่ Firebase Config ของโปรเจกต์ใหม่ที่นี่
+        const firebaseConfig = {
+            apiKey: "YOUR_NEW_API_KEY",
+            authDomain: "YOUR_NEW_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_NEW_PROJECT_ID",
+            storageBucket: "YOUR_NEW_PROJECT_ID.firebasestorage.app",
+            messagingSenderId: "YOUR_NEW_SENDER_ID",
+            appId: "YOUR_NEW_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        let settings = { themes: [], ads: [], adVideoUrl: "" };
+
+        async function loadConfig() {
+            try {
+                const snap = await getDoc(doc(db, "config", "settings"));
+                if (snap.exists()) {
+                    settings = snap.data();
+                    renderTemplates();
+                } else {
+                    document.getElementById('tpl-list').innerHTML = 'ยังไม่มีเทมเพลตในระบบ';
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderTemplates() {
+            const list = document.getElementById('tpl-list');
+            list.innerHTML = "";
+            if (!settings.themes || settings.themes.length === 0) {
+                list.innerHTML = "ยังไม่มีเทมเพลต";
+                return;
+            }
+
+            settings.themes.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="preview-box">
+                        <img src="${item.url}">
+                    </div>
+                    <div style="font-weight:bold; font-size:0.85rem; text-align:center;">${item.name}</div>
+                    <button class="btn btn-danger" style="width:100%; padding:6px; font-size:0.8rem;" data-index="${index}">ลบเทมเพลต</button>
+                `;
+                card.querySelector('button').addEventListener('click', () => deleteTemplate(index));
+                list.appendChild(card);
+            });
+        }
+
+        async function deleteTemplate(index) {
+            if (!confirm("ต้องการลบเทมเพลตนี้ใช่หรือไม่?")) return;
+            settings.themes.splice(index, 1);
+            await setDoc(doc(db, "config", "settings"), settings);
+            renderTemplates();
+        }
+
+        document.getElementById('upload-tpl-btn').addEventListener('click', async () => {
+            const nameInput = document.getElementById('tpl-name');
+            const fileInput = document.getElementById('tpl-file');
+            const status = document.getElementById('upload-status');
+
+            if (!nameInput.value || fileInput.files.length === 0) {
+                return alert("กรุณาระบุชื่อและเลือกไฟล์ภาพ");
+            }
+
+            const file = fileInput.files[0];
+            status.textContent = "กำลังอัปโหลด...";
+
+            try {
+                const fileRef = ref(storage, `templates/${Date.now()}_${file.name}`);
+                await uploadBytes(fileRef, file);
+                const downloadUrl = await getDownloadURL(fileRef);
+
+                if (!settings.themes) settings.themes = [];
+                settings.themes.push({ name: nameInput.value, url: downloadUrl });
+
+                await setDoc(doc(db, "config", "settings"), settings);
+
+                status.textContent = "สำเร็จ!";
+                nameInput.value = "";
+                fileInput.value = "";
+                renderTemplates();
+                setTimeout(() => status.textContent = "", 3000);
+            } catch (err) {
+                console.error(err);
+                status.textContent = "อัปโหลดล้มเหลว";
+            }
+        });
+
+        loadConfig();
+    </script>
+</body>
+</html>

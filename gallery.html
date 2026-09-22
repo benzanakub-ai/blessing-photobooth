@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLESSING PHOTOBOOTH - Gallery</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #0b0f19; color: #f3f4f6; padding: 30px 16px; min-height: 100vh; }
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 2rem; letter-spacing: 2px; color: #ffffff; text-transform: uppercase; }
+        p { color: #9ca3af; margin-top: 6px; font-size: 0.95rem; }
+        
+        /* Grid แบบคอลัมน์หลายช่อง ปรับสัดส่วนตามความสูงของภาพอัตโนมัติ */
+        .gallery-grid {
+            column-count: 4;
+            column-gap: 16px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1024px) { .gallery-grid { column-count: 3; } }
+        @media (max-width: 640px) { .gallery-grid { column-count: 2; column-gap: 10px; } }
+
+        .photo-card {
+            background: #1f2937;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            break-inside: avoid;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #374151;
+            transition: transform 0.2s ease;
+        }
+        .photo-card:hover { transform: translateY(-4px); }
+        .photo-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: contain;
+        }
+        .photo-actions {
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            background: #111827;
+        }
+        .download-btn {
+            background: #10b981;
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>BLESSING PHOTOBOOTH</h1>
+        <p>แตะที่รูปภาพเพื่อดาวน์โหลดรูปต้นฉบับของคุณ</p>
+    </div>
+
+    <div class="gallery-grid" id="gallery-container">
+        <div style="text-align: center; grid-column: 1/-1; color: #9ca3af;">กำลังโหลดรูปภาพ...</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        // 👉 ใส่ Firebase Config ของโปรเจกต์ใหม่ที่นี่
+        const firebaseConfig = {
+            apiKey: "YOUR_NEW_API_KEY",
+            authDomain: "YOUR_NEW_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_NEW_PROJECT_ID",
+            storageBucket: "YOUR_NEW_PROJECT_ID.firebasestorage.app",
+            messagingSenderId: "YOUR_NEW_SENDER_ID",
+            appId: "YOUR_NEW_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function fetchPhotos() {
+            const container = document.getElementById('gallery-container');
+            try {
+
+                // เดิม: collection(db, "photos")
+                // เปลี่ยนเป็น:
+                const q = query(collection(db, "photobooth_photos"), orderBy("createdAt", "desc"), limit(60));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                    container.innerHTML = `<div style="text-align:center; color:#9ca3af; width:100%;">ยังไม่มีภาพถ่ายในระบบ</div>`;
+                    return;
+                }
+
+                container.innerHTML = "";
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const card = document.createElement('div');
+                    card.className = 'photo-card';
+                    card.innerHTML = `
+                        <a href="${data.url}" target="_blank">
+                            <img src="${data.url}" loading="lazy">
+                        </a>
+                        <div class="photo-actions">
+                            <a href="${data.url}" download target="_blank" class="download-btn">ดาวน์โหลด</a>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Fetch photos error:", err);
+                container.innerHTML = `<div style="text-align:center; color:#ef4444; width:100%;">ไม่สามารถโหลดภาพถ่ายได้</div>`;
+            }
+        }
+
+        fetchPhotos();
+    </script>
+</body>
+</html>
