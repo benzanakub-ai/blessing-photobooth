@@ -42,8 +42,7 @@
         .carousel-track { display: flex; gap: 30px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 30px 10px; flex: 1; margin: 0 35px; scrollbar-width: none; }
         .template-card { flex: 0 0 280px; height: 420px; scroll-snap-align: center; background: var(--surface-color); border: 2px solid var(--border-color); border-radius: 16px; padding: 16px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column;}
         .template-card.selected { border-color: var(--accent-white); box-shadow: 0 0 30px rgba(255,255,255,0.25); background: #1a1a1a; transform: translateY(-8px); }
-        .template-preview-container { width: 100%; flex: 1; background: #fff; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 15px;}
-        .template-info { text-align: center; padding-top: 5px; }
+        .template-preview-container { width: 100%; flex: 1; background: transparent; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }        .template-info { text-align: center; padding-top: 5px; }
         .template-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 4px; color: var(--accent-white); text-transform: uppercase; letter-spacing: 1px;}
         .nav-btn { background: rgba(255,255,255,0.15); color: #fff; border: 2px solid #555; width: 72px; height: 72px; border-radius: 50%; font-size: 2.2rem; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 10; flex-shrink: 0; }
         .nav-btn:hover { background: rgba(255,255,255,0.3); transform: scale(1.1); border-color: #fff; }
@@ -435,8 +434,7 @@
                         card.className = `template-card ${index === 0 ? "selected" : ""}`;
                         card.innerHTML = `
                             <div class="template-preview-container">
-                                <img src="${url}" style="width: 100%; height: 100%; object-fit: contain;">
-                            </div>
+                            <img src="${url}" style="max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-radius: 4px;">                            </div>
                             <div class="template-info">
                                 <div class="template-title">${name}</div>
                             </div>
@@ -862,12 +860,6 @@
                     ctx.drawImage(state.processedOverlayCanvas, 0, 0, width, height);
                     cleanCtx.drawImage(state.processedOverlayCanvas, 0, 0, width, height);
                 }
-
-                ctx.save();
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = '#fff6e3';
-                ctx.fillRect(0, 0, width, height);
-                ctx.restore();
 
                 showResultAndUpload(stripCanvas);
             }
