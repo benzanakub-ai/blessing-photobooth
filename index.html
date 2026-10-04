@@ -346,7 +346,6 @@
                 const img2 = document.getElementById('ad-img-2');
                 const adVideo = document.getElementById('ad-video');
                 
-                // หากมีภาพโฆษณา ให้ปิดวิดีโอ (ถ้ามี)
                 if (kioskConfig.ads && kioskConfig.ads.length > 0) {
                     if(adVideo) adVideo.style.display = 'none';
                     
@@ -370,10 +369,9 @@
                                 img2.style.opacity = '0';
                             }
                             isImg1Active = !isImg1Active;
-                        }, 8000); // 8000 มิลลิวินาที = 8 วินาทีต่อภาพ
+                        }, 8000); 
                     }
                 } else if (kioskConfig.adVideoUrl) {
-                    // หากไม่มีภาพแต่มีวิดีโอ ให้เปิดวิดีโอแทน
                     if(adVideo) {
                         adVideo.style.display = 'block';
                         adVideo.src = kioskConfig.adVideoUrl;
@@ -446,9 +444,12 @@
                         
                         const card = document.createElement("div");
                         card.className = `template-card ${index === 0 ? "selected" : ""}`;
+                        // แก้ไขจุดนี้โดยการเพิ่ม </div> ปิด class="template-preview-container" ให้ถูกต้อง
                         card.innerHTML = `
                             <div class="template-preview-container">
-                            <img src="${url}" style="max-width: 100%; max-height: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-radius: 4px;">                            <div class="template-info">
+                                <img src="${url}" style="max-width: 100%; max-height: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.4); border-radius: 4px;">
+                            </div>
+                            <div class="template-info">
                                 <div class="template-title">${name}</div>
                             </div>
                         `;
@@ -786,7 +787,6 @@
                 hiddenCanvas.width = webcamElement.videoWidth || 1920; 
                 hiddenCanvas.height = webcamElement.videoHeight || 1080; 
                 
-                // ดึงภาพจากกล้องลง Canvas โดยตรง (ไม่ผ่านการแปลงสี)
                 ctx.drawImage(webcamElement, 0, 0, hiddenCanvas.width, hiddenCanvas.height); 
                 
                 const dataUrl = hiddenCanvas.toDataURL('image/jpeg', 0.95);
@@ -891,7 +891,6 @@
                     const dataUrl = stripCanvas.toDataURL('image/jpeg', 0.85);
                     const fileName = `photobooth_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
                     
-                    // เปลี่ยนโฟลเดอร์เก็บไฟล์เป็น photobooth_photos เพื่อไม่ให้ปนกับระบบเดิม
                     const storageReference = ref(storage, 'photobooth_photos/' + fileName);
 
                     await uploadString(storageReference, dataUrl, 'data_url');
@@ -906,7 +905,6 @@
                         });
                         qrStatus.textContent = "สแกนเพื่อรับรูป";
 
-                        // เปลี่ยนการเก็บลิงก์รูปลง collection 'photobooth_photos' แทน 'photos' เดิม
                         await addDoc(collection(db, "photobooth_photos"), { 
                             url: downloadUrl, 
                             thumb_url: downloadUrl,
