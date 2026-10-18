@@ -86,13 +86,6 @@
         .retake-icon-btn:hover { background: #ffffff; color: #000000; transform: scale(1.15); }
         
         .result-actions { display: flex; flex-direction: column; gap: 14px; min-width: 320px; }
-        
-        /* 🌟 CSS ปุ่ม Toggle สี/ขาวดำ 🌟 */
-        .style-toggle-container { background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 12px; margin-bottom: 4px; text-align: center; }
-        .style-toggle-label { font-size: 0.85rem; font-weight: bold; color: #a1a1aa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        .style-toggle-buttons { display: flex; gap: 8px; }
-        .style-btn { flex: 1; padding: 12px 0; border: 2px solid transparent; border-radius: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; background: #27272a; color: #71717a; font-size: 1rem;}
-        .style-btn.active { background: #ffffff; color: #000000; border-color: #ffffff; box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
 
         .qr-box { background: #fff; padding: 24px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; margin-bottom: 4px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); min-height: 230px; justify-content: center; }
         #qrcode { width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; }
@@ -124,7 +117,7 @@
     </style>
 </head>
 <body>
-    <!-- 🌟 โลโก้เพื่อเช็กว่าโค้ดถูกอัปเดตแล้วหรือยัง 🌟 -->
+    <!-- โลโก้เพื่อเช็กว่าโค้ดถูกอัปเดตแล้วหรือยัง -->
     <div class="brand-header">BLESSING PHOTOBOOTH <span class="brand-badge">V.2</span></div>
 
     <section id="screen-1" class="screen active">
@@ -203,15 +196,6 @@
                 </div>
                 <div class="result-actions">
                     
-                    <!-- 🌟 กล่องสวิตช์เลือกสี/ขาวดำ สำหรับหน้า Result 🌟 -->
-                    <div class="style-toggle-container" id="final-style-toggle" style="display: none;">
-                        <div class="style-toggle-label">เลือกรูปแบบภาพ (QR & พิมพ์)</div>
-                        <div class="style-toggle-buttons">
-                            <button id="btn-style-color" class="style-btn active">🎨 สี (COLOR)</button>
-                            <button id="btn-style-bw" class="style-btn">🖤 ขาวดำ (B&W)</button>
-                        </div>
-                    </div>
-
                     <div class="qr-box">
                         <div id="qrcode"></div>
                         <div id="qr-status">กำลังสร้างรูปภาพ...</div>
@@ -284,9 +268,7 @@
                 activeTemplateInfo: null,
                 activeLayout: [], processedOverlayCanvas: null, 
                 capturedPhotos: [], isShooting: false, mediaStream: null,
-                videoDevices: [], currentDeviceId: null,
-                colorDownloadUrl: null, bwDownloadUrl: null,
-                selectedFinalStyle: 'color' 
+                videoDevices: [], currentDeviceId: null
             };
             
             const CHROMA_TARGETS = [
@@ -755,7 +737,6 @@
                 
                 document.getElementById('qrcode').innerHTML = ""; 
                 document.getElementById('qr-status').textContent = "รออัปโหลดใหม่...";
-                document.getElementById('final-style-toggle').style.display = 'none'; 
 
                 document.querySelectorAll('.shot-badge').forEach(b => b.classList.remove('captured'));
                 const badge = document.getElementById(`shot-${index + 1}`);
@@ -905,68 +886,30 @@
 
                 const qrContainer = document.getElementById('qrcode'); 
                 const qrStatus = document.getElementById('qr-status');
-                const finalToggleBox = document.getElementById('final-style-toggle');
                 
                 qrContainer.innerHTML = ""; 
                 qrStatus.textContent = "กำลังอัปโหลดและสร้าง QR Code...";
-                finalToggleBox.style.display = 'none'; 
                 
-                state.selectedFinalStyle = 'color';
                 document.getElementById('strip-canvas').style.filter = 'none';
-                document.getElementById('btn-style-color').classList.add('active');
-                document.getElementById('btn-style-bw').classList.remove('active');
 
                 try {
-                    const colorDataUrl = stripCanvas.toDataURL('image/jpeg', 0.85);
+                    const dataUrl = stripCanvas.toDataURL('image/jpeg', 0.85);
                     const baseFileName = `photobooth_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-                    let uploadPromises = []; 
 
-                    // 🌟 แก้ไขเป็นโฟลเดอร์ photos เดิมของคุณเบนซ์ เพื่อป้องกันอัปโหลดไม่ผ่าน 🌟
-                    const colorRef = ref(storage, 'photos/C_' + baseFileName + '.jpg');
-                    uploadPromises.push(
-                        uploadString(colorRef, colorDataUrl, 'data_url')
-                            .then(() => getDownloadURL(colorRef))
-                            .then(url => { state.colorDownloadUrl = url; })
-                    );
-
-                    const bwCanvas = document.createElement('canvas');
-                    bwCanvas.width = stripCanvas.width;
-                    bwCanvas.height = stripCanvas.height;
-                    const bwCtx = bwCanvas.getContext('2d', { willReadFrequently: true });
-                    bwCtx.drawImage(stripCanvas, 0, 0);
+                    // บันทึกรูปลงโฟลเดอร์ photobooth_photos (เพื่อแยกจาก Blessing Snap เดิม)
+                    const colorRef = ref(storage, 'photobooth_photos/' + baseFileName + '.jpg');
                     
-                    const imgData = bwCtx.getImageData(0, 0, bwCanvas.width, bwCanvas.height);
-                    const data = imgData.data;
-                    for (let i = 0; i < data.length; i += 4) {
-                        let r = data[i], g = data[i + 1], b = data[i + 2];
-                        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
-                        gray = Math.pow(gray / 255, 0.85) * 255;
-                        gray = (gray - 128) * 1.3 + 138;
-                        data[i] = data[i+1] = data[i+2] = Math.max(0, Math.min(255, gray));
-                    }
-                    bwCtx.putImageData(imgData, 0, 0);
+                    await uploadString(colorRef, dataUrl, 'data_url');
+                    const downloadUrl = await getDownloadURL(colorRef);
 
-                    const bwDataUrl = bwCanvas.toDataURL('image/jpeg', 0.85);
-                    const bwRef = ref(storage, 'photos/BW_' + baseFileName + '.jpg');
-                    uploadPromises.push(
-                        uploadString(bwRef, bwDataUrl, 'data_url')
-                            .then(() => getDownloadURL(bwRef))
-                            .then(url => { state.bwDownloadUrl = url; })
-                    );
-
-                    await Promise.all(uploadPromises);
-
-                    if (state.colorDownloadUrl) {
+                    if (downloadUrl) {
                         qrContainer.innerHTML = "";
-                        new QRCode(qrContainer, { text: state.colorDownloadUrl, width: 160, height: 160 });
+                        new QRCode(qrContainer, { text: downloadUrl, width: 160, height: 160 });
                         qrStatus.textContent = "สแกนเพื่อรับรูป";
 
-                        finalToggleBox.style.display = 'block';
-
-                        // 🌟 บันทึกเข้า Collection เดิมของคุณเบนซ์ 🌟
-                        await addDoc(collection(db, "photos"), { 
-                            url: state.colorDownloadUrl, 
-                            bw_url: state.bwDownloadUrl, 
+                        // บันทึกเข้า Collection สำหรับ photobooth โดยเฉพาะ
+                        await addDoc(collection(db, "photobooth_photos"), { 
+                            url: downloadUrl, 
                             createdAt: serverTimestamp() 
                         });
                     }
@@ -975,32 +918,6 @@
                     qrStatus.textContent = "เกิดข้อผิดพลาดในการอัปโหลด"; 
                 }
             }
-
-            document.getElementById('btn-style-color').addEventListener('click', () => {
-                if (!state.colorDownloadUrl) return;
-                playBeep();
-                state.selectedFinalStyle = 'color';
-                document.getElementById('btn-style-color').classList.add('active');
-                document.getElementById('btn-style-bw').classList.remove('active');
-                
-                document.getElementById('strip-canvas').style.filter = 'none';
-                
-                document.getElementById('qrcode').innerHTML = "";
-                new QRCode(document.getElementById('qrcode'), { text: state.colorDownloadUrl, width: 160, height: 160 });
-            });
-
-            document.getElementById('btn-style-bw').addEventListener('click', () => {
-                if (!state.bwDownloadUrl) return;
-                playBeep();
-                state.selectedFinalStyle = 'bw';
-                document.getElementById('btn-style-bw').classList.add('active');
-                document.getElementById('btn-style-color').classList.remove('active');
-                
-                document.getElementById('strip-canvas').style.filter = 'grayscale(100%) contrast(120%)';
-                
-                document.getElementById('qrcode').innerHTML = "";
-                new QRCode(document.getElementById('qrcode'), { text: state.bwDownloadUrl, width: 160, height: 160 });
-            });
 
             let printCopies = 1;
             const printCopiesElem = document.getElementById('print-copies-count');
@@ -1027,11 +944,8 @@
                 printCtx.fillStyle = '#ffffff';
                 printCtx.fillRect(0, 0, printWidth, printHeight);
 
-                if (state.selectedFinalStyle === 'bw') {
-                    printCtx.filter = 'grayscale(100%) contrast(120%)';
-                } else {
-                    printCtx.filter = 'none';
-                }
+                // นำ Filter สีขาวดำออก
+                printCtx.filter = 'none';
 
                 if (state.activeTemplateInfo.isStrip) {
                     printCtx.drawImage(cleanCanvas, 0, 0, printWidth / 2, printHeight);
