@@ -78,12 +78,11 @@
 
         .photo-info { padding: 12px; font-size: 0.75rem; color: #9ca3af; display: flex; justify-content: space-between; align-items: center; }
         
-        /* ปุ่ม Action สำหรับแต่ละรูป */
+        /* Photo Actions Styles */
         .photo-actions { display: flex; padding: 0 12px 12px; gap: 8px; }
         .action-btn { flex: 1; background: #1a1a1e; border: 1px solid #333; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 6px; }
         .action-btn:hover { background: #2a2a30; border-color: #fff; }
         .action-btn.del:hover { background: #ef4444; border-color: #ef4444; }
-
     </style>
 </head>
 <body>
@@ -137,7 +136,7 @@
                 <span id="upload-status" style="color: #38bdf8; font-size: 0.8rem; display: block; margin-top: 8px;"></span>
                 
                 <hr style="border: 0; border-top: 1px solid #26262b; margin: 16px 0;">
-                <label style="margin-bottom: 10px; display: block;">กรอบที่ดึงมาจากโฟลเดอร์ Storage/templates</label>
+                <label style="margin-bottom: 10px; display: block;">กรอบจากโฟลเดอร์ Storage/templates</label>
                 <div class="list-container" id="tpl-list">กำลังโหลดรายการ...</div>
             </div>
         </div>
@@ -187,10 +186,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
-        // เพิ่ม listAll และ deleteObject
         import { getStorage, ref, uploadBytes, getDownloadURL, listAll, deleteObject } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-storage.js";
 
-        // ใช้ Config โปรเจกต์ที่เชื่อมต่อถูกต้อง
+        // ใช้ Config ของโปรเจกต์ blessing-snap
         const firebaseConfig = {
             apiKey: "AIzaSyA57qyFTexeNyRMTTLUJMNC5Bm24L_K0io",
             authDomain: "blessing-snap.firebaseapp.com",
@@ -239,17 +237,18 @@
             document.getElementById('dashboard').style.display = 'none';
         });
 
-        // --- เริ่มต้นโหลดข้อมูล ---
+        // --- เริ่มต้นโหลดข้อมูล Config แบบแยกไฟล์ ---
         async function initAdmin() {
             try {
-                const snap = await getDoc(doc(db, "config", "settings"));
+                // แก้ให้ดึงข้อมูลจากไฟล์ photobooth_settings แทน settings ของเดิม
+                const snap = await getDoc(doc(db, "config", "photobooth_settings"));
                 if (snap.exists()) {
                     settings = snap.data();
                     if(!settings.themes) settings.themes = [];
                     if(!settings.ads) settings.ads = [];
                     renderAds();
                 }
-                // สั่งดึงเทมเพลตจาก Storage โดยตรง ทันทีที่โหลดหน้าเสร็จ
+                // สั่งดึงเทมเพลตจาก Storage โฟลเดอร์ templates ทันทีที่โหลด
                 await syncTemplatesFromStorage();
                 subscribeToLiveGallery();
             } catch (err) { console.error(err); }
@@ -294,7 +293,8 @@
         document.getElementById('save-ad-order-btn').addEventListener('click', async () => {
             const btn = document.getElementById('save-ad-order-btn');
             btn.textContent = "กำลังบันทึก...";
-            await setDoc(doc(db, "config", "settings"), settings);
+            // บันทึกลง photobooth_settings
+            await setDoc(doc(db, "config", "photobooth_settings"), settings);
             btn.textContent = "💾 บันทึกลำดับโฆษณา";
             alert('บันทึกลำดับโฆษณาเรียบร้อยแล้ว');
         });
@@ -302,7 +302,7 @@
         window.deleteAd = async function(index) {
             if (!confirm("ต้องการลบภาพโฆษณานี้ใช่หรือไม่?")) return;
             settings.ads.splice(index, 1);
-            await setDoc(doc(db, "config", "settings"), settings);
+            await setDoc(doc(db, "config", "photobooth_settings"), settings);
             renderAds();
         };
 
@@ -315,12 +315,13 @@
             status.textContent = "กำลังอัปโหลด กรุณารอ...";
 
             try {
-                const fileRef = ref(storage, `ads/${Date.now()}_${file.name}`);
+                // แยกโฟลเดอร์เก็บโฆษณาของ Photobooth โดยเฉพาะ
+                const fileRef = ref(storage, `photobooth_ads/${Date.now()}_${file.name}`);
                 await uploadBytes(fileRef, file);
                 const downloadUrl = await getDownloadURL(fileRef);
 
                 settings.ads.push(downloadUrl);
-                await setDoc(doc(db, "config", "settings"), settings);
+                await setDoc(doc(db, "config", "photobooth_settings"), settings);
 
                 status.textContent = "✔ อัปโหลดโฆษณาสำเร็จ!";
                 fileInput.value = "";
@@ -329,24 +330,23 @@
             } catch (err) { status.textContent = "อัปโหลดล้มเหลว"; }
         });
 
-        // ====== ส่วนจัดการเทมเพลต (TEMPLATE MANAGER แบบดึงจาก Storage โดยตรง) ======
+        // ====== ส่วนจัดการเทมเพลต (ดึงจาก Storage: templates โดยตรง) ======
         async function syncTemplatesFromStorage() {
             const listContainer = document.getElementById('tpl-list');
             listContainer.innerHTML = "<div style='color:#666; font-size:0.8rem; text-align:center;'>กำลังซิงค์ไฟล์จาก Storage...</div>";
             
             try {
-                // ดึงรายการไฟล์จากโฟลเดอร์ templates/
+                // ดึงเฉพาะจากโฟลเดอร์ templates
                 const templatesRef = ref(storage, 'templates');
                 const res = await listAll(templatesRef);
                 
                 const newThemes = [];
                 for (const itemRef of res.items) {
                     const url = await getDownloadURL(itemRef);
-                    // สกัดชื่อไฟล์ให้สวยงาม (ตัด Timestamp ด้านหน้าออกถ้ามี)
                     let displayName = itemRef.name;
                     if(displayName.includes('_')) {
                         const parts = displayName.split('_');
-                        parts.shift(); // เอา Timestamp ออก
+                        parts.shift();
                         displayName = parts.join('_').split('.')[0];
                     } else {
                         displayName = displayName.split('.')[0];
@@ -355,13 +355,13 @@
                     newThemes.push({
                         name: displayName,
                         url: url,
-                        fullPath: itemRef.fullPath // เก็บ Path ไว้สำหรับสั่งลบ
+                        fullPath: itemRef.fullPath
                     });
                 }
                 
-                // อัปเดตข้อมูลเข้าไปใน Firestore (เพื่อให้หน้า index.html รับรู้และใช้งานต่อได้ทันที)
                 settings.themes = newThemes;
-                await setDoc(doc(db, "config", "settings"), settings, {merge: true});
+                // บันทึกลง photobooth_settings แยกต่างหาก ไม่ให้ตีกับ Blessing Snap
+                await setDoc(doc(db, "config", "photobooth_settings"), settings, {merge: true});
                 
                 renderTemplates();
             } catch (err) {
@@ -374,7 +374,7 @@
             const list = document.getElementById('tpl-list');
             list.innerHTML = "";
             if (!settings.themes || settings.themes.length === 0) { 
-                list.innerHTML = "<div style='color:#666; font-size:0.8rem;'>ยังไม่มีกรอบรูปใน Storage</div>"; 
+                list.innerHTML = "<div style='color:#666; font-size:0.8rem;'>ยังไม่มีกรอบรูปใน Storage โฟลเดอร์ templates</div>"; 
                 return; 
             }
 
@@ -394,7 +394,6 @@
             const item = settings.themes[index];
             
             try {
-                // สั่งลบไฟล์จริงๆ ใน Storage
                 if (item.fullPath) {
                     await deleteObject(ref(storage, item.fullPath));
                 } else {
@@ -403,10 +402,8 @@
                     await deleteObject(ref(storage, path));
                 }
             } catch (e) {
-                console.warn("การลบใน Storage ล้มเหลว อาจจะถูกลบไปก่อนแล้ว", e);
+                console.warn("การลบใน Storage ล้มเหลว", e);
             }
-
-            // ซิงค์ใหม่เพื่อโหลดหน้าจออีกครั้ง
             await syncTemplatesFromStorage();
         };
 
@@ -421,11 +418,11 @@
             status.textContent = "กำลังอัปโหลด กรุณารอ...";
 
             try {
-                // ถ้าลูกค้าไม่ใส่ชื่อ จะเอาชื่อไฟล์ตั้งต้นไปใช้
                 const customName = nameInput.value.trim() ? nameInput.value.trim() : file.name.split('.')[0];
                 const safeName = customName.replace(/[^a-zA-Z0-9ก-๙\s-]/g, '_');
-                const fileNameToSave = `${Date.now()}_${safeName}.png`; // บังคับเป็น png ป้องกันบั๊ก
+                const fileNameToSave = `${Date.now()}_${safeName}.png`; 
                 
+                // โยนไฟล์เข้าโฟลเดอร์ templates
                 const fileRef = ref(storage, `templates/${fileNameToSave}`);
                 await uploadBytes(fileRef, file);
                 
@@ -433,7 +430,6 @@
                 nameInput.value = ""; 
                 fileInput.value = "";
                 
-                // หลังจากอัปโหลดเสร็จ สั่งให้ระบบเข้าไปกวาดข้อมูลใหม่ทันที
                 await syncTemplatesFromStorage();
                 
                 status.textContent = "✔ ซิงค์ระบบสำเร็จพร้อมใช้งาน!";
@@ -521,7 +517,6 @@
                 
                 const card = document.createElement('div');
                 card.className = `photo-card ${isSelected ? 'selected' : ''}`;
-                
                 card.innerHTML = `
                     <div class="check-overlay" onclick="toggleSelect('${photo.id}')"></div>
                     <img src="${photo.url}" class="photo-img" onclick="toggleSelect('${photo.id}')">

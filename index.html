@@ -438,7 +438,7 @@
 
             async function loadFirebaseConfig() {
                 try {
-                    const snap = await getDoc(doc(db, "config", "settings"));
+                    const snap = await getDoc(doc(db, "config", "photobooth_settings"));
                     if (snap.exists()) {
                         kioskConfig = snap.data();
                         if (kioskConfig.adVideoUrl) {
