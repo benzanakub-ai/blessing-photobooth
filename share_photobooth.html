@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Your Photo - Blessing Photobooth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .photo-card { background: #18181b; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen flex flex-col font-sans">
+
+    <header class="bg-zinc-900 border-b border-zinc-800 p-4 text-center sticky top-0 z-10 shadow-lg">
+        <h1 class="text-xl font-black tracking-widest uppercase text-emerald-400">BLESSING PHOTOBOOTH</h1>
+        <p class="text-xs text-zinc-400 mt-1 uppercase tracking-wider">Thanks for joining us!</p>
+    </header>
+
+    <main class="flex-1 p-4 flex flex-col items-center max-w-lg mx-auto w-full space-y-4 mt-2">
+        
+        <!-- Loading -->
+        <div id="loading" class="flex flex-col items-center justify-center py-20 text-zinc-400">
+            <i class="fa-solid fa-spinner fa-spin text-3xl mb-4 text-emerald-500"></i>
+            <p class="text-sm font-semibold tracking-wide uppercase">กำลังโหลดรูปภาพ...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="error" class="hidden flex-col items-center justify-center py-20 text-red-400 text-center px-4">
+            <i class="fa-regular fa-face-frown text-4xl mb-4"></i>
+            <p class="font-bold">ไม่พบรูปภาพ</p>
+            <p class="text-xs text-zinc-500 mt-2">ลิงก์อาจหมดอายุ หรือถูกลบออกจากระบบแล้ว</p>
+        </div>
+
+        <div id="line-warning" class="hidden w-full bg-red-900/80 border border-red-500 text-white p-3.5 rounded-xl text-sm mb-2 text-center shadow-lg leading-relaxed">
+            <i class="fa-solid fa-triangle-exclamation text-lg text-red-300 mb-1 block"></i>
+            คุณกำลังเปิดผ่านแอปที่บล็อกการโหลดรูป<br>
+            กรุณากดปุ่ม <b><i class="fa-solid fa-ellipsis-vertical mx-1"></i> (3 จุดมุมขวาบน)</b><br>
+            แล้วเลือก <b>"เปิดด้วยเบราว์เซอร์เริ่มต้น"</b>
+        </div>
+
+        <div id="ios-warning" class="hidden w-full bg-sky-900/40 border border-sky-700/50 text-sky-300 text-[13.5px] px-4 py-3 rounded-xl mb-4 text-center shadow-lg leading-relaxed">
+            <i class="fa-brands fa-apple text-lg mb-1 block text-white"></i>
+            <b>สำหรับผู้ใช้ iPhone (iOS)</b><br>
+            กรุณาใช้นิ้ว <b>"แตะค้างไว้ที่รูปภาพ"</b> <br>แล้วเลือก <b>"Save to Photos"</b> ครับ
+        </div>
+
+        <!-- เนื้อหารูปภาพทั้งหมดจะถูกโหลดมาใส่ใน div นี้ -->
+        <div id="photo-container" class="hidden w-full pb-10 space-y-8">
+            
+            <!-- รูปกรอบ 2x6 -->
+            <div>
+                <h2 class="font-bold text-sm uppercase tracking-wide text-zinc-300 mb-3 ml-2 flex items-center gap-2">
+                    <i class="fa-solid fa-film text-emerald-500"></i> Photo Strip (2x6)
+                </h2>
+                <div class="photo-card">
+                    <img id="img-strip" src="" class="w-full h-auto object-contain pointer-events-auto" style="-webkit-touch-callout: default;">
+                    <button id="btn-strip" onclick="downloadImage('strip')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 transition flex items-center justify-center gap-2 active:bg-emerald-700">
+                        <i class="fa-solid fa-download"></i> <span class="btn-text">บันทึกรูปนี้</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="w-full h-px bg-zinc-800 my-6"></div>
+
+            <!-- หมวดรูปเดี่ยว (Originals) -->
+            <div>
+                <h2 class="font-bold text-sm uppercase tracking-wide text-zinc-400 mb-3 ml-2 flex items-center gap-2">
+                    <i class="fa-regular fa-images"></i> รูปเดี่ยวต้นฉบับ
+                </h2>
+                <div id="original-photos-list" class="space-y-6">
+                    <!-- JS จะเอาการ์ดรูปเดี่ยวมาแทรกตรงนี้ -->
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA57qyFTexeNyRMTTLUJMNC5Bm24L_K0io",
+            authDomain: "blessing-snap.firebaseapp.com",
+            projectId: "blessing-snap",
+            storageBucket: "blessing-snap.firebasestorage.app",
+            messagingSenderId: "324842012527",
+            appId: "1:324842012527:web:96a235fbf494d39ce9f29a",
+            measurementId: "G-8H8D35R54J"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // ข้อมูลรูปรวมและเดี่ยวทั้งหมด
+        let photoData = null; 
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const photoId = urlParams.get('id');
+
+        const ua = navigator.userAgent || navigator.vendor || window.opera;
+        const isInAppBrowser = (ua.indexOf("Line") > -1) || (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1);
+        const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+
+        if (isInAppBrowser) document.getElementById('line-warning').style.display = 'block';
+        if (isIOS) document.getElementById('ios-warning').style.display = 'block';
+
+        async function fetchPhoto() {
+            if (!photoId) return showError();
+            try {
+                // 🌟 ดึงข้อมูลจากคอลเลกชันใหม่ photobooth_photos
+                const docSnap = await getDoc(doc(db, "photobooth_photos", photoId));
+                if (docSnap.exists()) {
+                    photoData = docSnap.data();
+                    renderPhotos();
+                } else {
+                    showError();
+                }
+            } catch (error) {
+                console.error(error); showError();
+            }
+        }
+
+        function renderPhotos() {
+            // โชว์รูปรวม (Strip)
+            document.getElementById('img-strip').src = photoData.stripUrl;
+            
+            // สร้างการ์ดสำหรับรูปเดี่ยว (Originals)
+            const origContainer = document.getElementById('original-photos-list');
+            origContainer.innerHTML = ''; // ล้างของเก่า
+
+            if (photoData.originalUrls && photoData.originalUrls.length > 0) {
+                photoData.originalUrls.forEach((url, index) => {
+                    const cardHTML = `
+                        <div class="photo-card">
+                            <img src="${url}" class="w-full h-auto object-contain pointer-events-auto" style="-webkit-touch-callout: default;">
+                            <button onclick="downloadImage('orig', ${index})" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 transition flex items-center justify-center gap-2 active:bg-zinc-900 border-t border-zinc-700">
+                                <i class="fa-solid fa-download"></i> <span class="btn-text">บันทึกรูปเดี่ยว (${index + 1})</span>
+                            </button>
+                        </div>
+                    `;
+                    origContainer.innerHTML += cardHTML;
+                });
+            }
+
+            // ถ้าเป็น iOS เปลี่ยนคำอธิบายบนปุ่ม
+            if (isIOS) {
+                setTimeout(() => {
+                    document.querySelectorAll('.btn-text').forEach(el => el.textContent = "แตะค้างที่รูปเพื่อบันทึก");
+                    document.querySelectorAll('.fa-download').forEach(icon => icon.className = "fa-regular fa-hand-pointer");
+                }, 100);
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('photo-container').style.display = 'block';
+        }
+
+        function showError() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'flex';
+        }
+
+        // ฟังก์ชันดาวน์โหลดอัจฉริยะ (จัดการทั้ง Strip และ Orig)
+        window.downloadImage = async (type, index = 0) => {
+            if(!photoData) return;
+            
+            // หา URL ให้ตรงกับปุ่มที่กด
+            let targetUrl = "";
+            if (type === 'strip') {
+                targetUrl = photoData.stripUrl;
+            } else if (type === 'orig') {
+                targetUrl = photoData.originalUrls[index];
+            }
+
+            if (isIOS) {
+                alert("📱 วิธีบันทึกลงแอป Photos:\nกรุณาใช้นิ้วแตะ 'ค้างไว้ที่รูปภาพ' จากนั้นเลือกเมนู 'Save to Photos' (บันทึกไปยังแอปรูปภาพ) ครับ");
+                return;
+            }
+
+            if (isInAppBrowser) {
+                window.location.href = targetUrl;
+                return;
+            }
+
+            const fileName = `BlessingPhotobooth_${type}_${index}_${Date.now()}.jpg`;
+
+            try {
+                const response = await fetch(targetUrl);
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = fileName;
+                
+                document.body.appendChild(link);
+                link.click();
+                
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch(e) {
+                window.location.href = targetUrl;
+            }
+        };
+
+        fetchPhoto();
+    </script>
+</body>
+</html>
