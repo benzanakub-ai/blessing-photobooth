@@ -848,7 +848,7 @@
             });
         }
 
-        function drawStripLayout(ctx, cleanCtx, stripCanvas, cleanCanvas, images) {
+            function drawStripLayout(ctx, cleanCtx, stripCanvas, cleanCanvas, images) {
             const width = state.activeTemplateInfo.width; 
             const height = state.activeTemplateInfo.height; 
             
@@ -864,6 +864,7 @@
             const retakeContainer = document.getElementById('retake-buttons-container');
             retakeContainer.innerHTML = ''; 
 
+            // 🌟 1. วาดรูปลูกค้า (Photos) ลงไปก่อน (เป็นเลเยอร์ล่างสุด) 🌟
             images.forEach((img, i) => {
                 if (img && state.activeLayout[i]) {
                     const f = state.activeLayout[i]; 
@@ -871,7 +872,6 @@
                     const targetRatio = f.w / f.h;
                     let sw, sh, sx, sy;
             
-                    // ครอปภาพให้อยู่ในกรอบแบบพอดี (Object-fit cover behavior)
                     if (imgRatio > targetRatio) { 
                         sh = img.height; sw = img.height * targetRatio; sx = (img.width - sw) / 2; sy = 0; 
                     } else { 
@@ -899,7 +899,8 @@
                 }
             });
 
-            // 🌟 2. วางกรอบ 2x6 ทับบนสุด 🌟
+            // 🌟 2. วาดกรอบ (Template Frame) ทับเป็นเลเยอร์บนสุด 🌟
+            // ย้ายคำสั่งนี้มาไว้ด้านล่าง เพื่อให้กรอบทับรูปลูกค้าที่อาจจะล้นขอบออกมา
             if (state.processedOverlayCanvas) {
                 ctx.drawImage(state.processedOverlayCanvas, 0, 0, width, height);
                 cleanCtx.drawImage(state.processedOverlayCanvas, 0, 0, width, height);
