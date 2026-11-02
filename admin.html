@@ -42,11 +42,15 @@
 
         /* Template & Ad Lists */
         .list-container { display: flex; flex-direction: column; gap: 12px; }
-        .list-item { background: #1a1a1e; border: 1px solid #333; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        /* 🌟 แก้ไข: ทำให้กรอบเทมเพลตดูเป็นบล็อกที่จับลากได้ และมี Position แบบ Relative เพื่อวางไอคอน */
+        .list-item { background: #1a1a1e; border: 1px solid #333; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
         .preview-img { width: 100%; height: 100px; background: #000; border-radius: 4px; object-fit: contain; cursor: grab; }
         
+        /* 🌟 ไอคอน 1จุดๆ สำหรับจับลากเทมเพลต */
+        .drag-handle { position: absolute; left: 10px; top: 10px; background: rgba(0,0,0,0.6); color: #ccc; font-size: 0.8rem; padding: 4px 6px; border-radius: 4px; cursor: grab; z-index: 10; font-weight: bold; }
+        
         /* AD Manager Specific */
-        .ad-item { flex-direction: row; align-items: center; justify-content: space-between; padding: 8px 12px; }
+        .ad-item { flex-direction: row; align-items: center; justify-content: space-between; padding: 8px 12px; position: static; }
         .ad-item img { width: 80px; height: 50px; cursor: grab; }
         .del-btn-small { background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
 
@@ -136,8 +140,11 @@
                 <span id="upload-status" style="color: #38bdf8; font-size: 0.8rem; display: block; margin-top: 8px;"></span>
                 
                 <hr style="border: 0; border-top: 1px solid #26262b; margin: 16px 0;">
-                <label style="margin-bottom: 10px; display: block;">กรอบจากโฟลเดอร์ Storage/templates</label>
+                <label style="margin-bottom: 10px; display: block;">ลำดับกรอบรูป (ลากขึ้นลงเพื่อสลับตำแหน่ง)</label>
                 <div class="list-container" id="tpl-list">กำลังโหลดรายการ...</div>
+                
+                <!-- 🌟 เพิ่มปุ่มบันทึกลำดับเทมเพลต 🌟 -->
+                <button class="btn" id="save-tpl-order-btn" style="background: #10b981; margin-top: 12px; display: none;">💾 บันทึกลำดับกรอบ</button>
             </div>
         </div>
 
@@ -240,7 +247,6 @@
         // --- เริ่มต้นโหลดข้อมูล Config แบบแยกไฟล์ ---
         async function initAdmin() {
             try {
-                // แก้ให้ดึงข้อมูลจากไฟล์ photobooth_settings แทน settings ของเดิม
                 const snap = await getDoc(doc(db, "config", "photobooth_settings"));
                 if (snap.exists()) {
                     settings = snap.data();
@@ -315,7 +321,6 @@
             status.textContent = "กำลังอัปโหลด กรุณารอ...";
 
             try {
-                // แยกโฟลเดอร์เก็บโฆษณาของ Photobooth โดยเฉพาะ
                 const fileRef = ref(storage, `photobooth_ads/${Date.now()}_${file.name}`);
                 await uploadBytes(fileRef, file);
                 const downloadUrl = await getDownloadURL(fileRef);
@@ -330,17 +335,17 @@
             } catch (err) { status.textContent = "อัปโหลดล้มเหลว"; }
         });
 
-        // ====== ส่วนจัดการเทมเพลต (ดึงจาก Storage: templates โดยตรง) ======
+        // ====== ส่วนจัดการเทมเพลต (ดึงจาก Storage: templates โดยตรง และรองรับการลาก) ======
         async function syncTemplatesFromStorage() {
             const listContainer = document.getElementById('tpl-list');
             listContainer.innerHTML = "<div style='color:#666; font-size:0.8rem; text-align:center;'>กำลังซิงค์ไฟล์จาก Storage...</div>";
             
             try {
-                // ดึงเฉพาะจากโฟลเดอร์ templates
+                // ดึงรายการไฟล์ทั้งหมดจาก Storage
                 const templatesRef = ref(storage, 'templates');
                 const res = await listAll(templatesRef);
                 
-                const newThemes = [];
+                const storageThemes = [];
                 for (const itemRef of res.items) {
                     const url = await getDownloadURL(itemRef);
                     let displayName = itemRef.name;
@@ -351,16 +356,27 @@
                     } else {
                         displayName = displayName.split('.')[0];
                     }
-
-                    newThemes.push({
-                        name: displayName,
-                        url: url,
-                        fullPath: itemRef.fullPath
+                    storageThemes.push({ name: displayName, url: url, fullPath: itemRef.fullPath });
+                }
+                
+                // 🌟 Logic การซิงค์แบบจำลำดับเดิม:
+                // 1. ตรวจสอบของเดิมใน Database (settings.themes) ก่อน ว่าอันไหนยังมีอยู่ใน Storage บ้าง
+                let mergedThemes = [];
+                if (settings.themes && settings.themes.length > 0) {
+                    settings.themes.forEach(dbTheme => {
+                        const existsInStorage = storageThemes.find(st => st.url === dbTheme.url);
+                        if (existsInStorage) mergedThemes.push(dbTheme);
                     });
                 }
                 
-                settings.themes = newThemes;
-                // บันทึกลง photobooth_settings แยกต่างหาก ไม่ให้ตีกับ Blessing Snap
+                // 2. ตรวจสอบไฟล์ใหม่จาก Storage ที่ยังไม่เคยมีใน Database แล้วเอาไปต่อท้าย
+                storageThemes.forEach(st => {
+                    const existsInDb = mergedThemes.find(mt => mt.url === st.url);
+                    if (!existsInDb) mergedThemes.push(st);
+                });
+
+                // บันทึกการเปลี่ยนแปลงกลับลง Database
+                settings.themes = mergedThemes;
                 await setDoc(doc(db, "config", "photobooth_settings"), settings, {merge: true});
                 
                 renderTemplates();
@@ -375,19 +391,54 @@
             list.innerHTML = "";
             if (!settings.themes || settings.themes.length === 0) { 
                 list.innerHTML = "<div style='color:#666; font-size:0.8rem;'>ยังไม่มีกรอบรูปใน Storage โฟลเดอร์ templates</div>"; 
+                document.getElementById('save-tpl-order-btn').style.display = 'none';
                 return; 
             }
 
             settings.themes.forEach((item, index) => {
-                const card = document.createElement('div'); card.className = 'list-item';
+                const card = document.createElement('div'); 
+                card.className = 'list-item tpl-item'; // 🌟 ใส่คลาส tpl-item สำหรับ Sortable
+                card.setAttribute('data-url', item.url); // 🌟 ฝัง URL เป็น ID ไว้อ้างอิงตอนสลับ
                 card.innerHTML = `
+                    <div class="drag-handle">⋮⋮ ลากสลับ</div>
                     <img src="${item.url}" class="preview-img">
                     <div style="font-size:0.85rem; text-align:center; font-weight:bold; word-wrap:break-word; padding:0 10px;">${item.name}</div>
-                    <button class="btn btn-danger" style="padding:6px; font-size:0.8rem;" onclick="deleteTemplate(${index})">🗑 ลบไฟล์ทิ้ง</button>
+                    <button class="btn btn-danger" style="padding:6px; font-size:0.8rem; position:relative; z-index:10;" onclick="deleteTemplate(${index})">🗑 ลบไฟล์ทิ้ง</button>
                 `;
                 list.appendChild(card);
             });
+
+            document.getElementById('save-tpl-order-btn').style.display = 'block';
+
+            // 🌟 สร้างระบบ Sortable (Drag-and-Drop) สำหรับเทมเพลต
+            new Sortable(list, {
+                animation: 150,
+                handle: '.list-item', // ลากตรงไหนของการ์ดก็ได้ หรือจะเปลี่ยนเป็น '.drag-handle' ก็ได้ครับ
+                onEnd: function () {
+                    // เมื่อลากเสร็จ ให้ดึง URL เรียงตามลำดับใหม่
+                    const newOrderUrls = [];
+                    list.querySelectorAll('.tpl-item').forEach(el => newOrderUrls.push(el.getAttribute('data-url')));
+                    
+                    // สร้าง Array ธีมอันใหม่ตามลำดับ URL 
+                    const newThemesArray = [];
+                    newOrderUrls.forEach(url => {
+                        const themeObj = settings.themes.find(t => t.url === url);
+                        if (themeObj) newThemesArray.push(themeObj);
+                    });
+                    
+                    settings.themes = newThemesArray; 
+                }
+            });
         }
+
+        // 🌟 ปุ่มบันทึกลำดับเทมเพลต (บันทึกขึ้น Database)
+        document.getElementById('save-tpl-order-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('save-tpl-order-btn');
+            btn.textContent = "กำลังบันทึก...";
+            await setDoc(doc(db, "config", "photobooth_settings"), settings, {merge: true});
+            btn.textContent = "💾 บันทึกลำดับกรอบ";
+            alert('บันทึกลำดับกรอบเรียบร้อยแล้ว');
+        });
 
         window.deleteTemplate = async function(index) {
             if (!confirm("ต้องการลบกรอบรูปนี้ออกจาก Storage ใช่หรือไม่?")) return;
@@ -404,6 +455,11 @@
             } catch (e) {
                 console.warn("การลบใน Storage ล้มเหลว", e);
             }
+            
+            // ตัดรายการนี้ออกจาก Database ทันทีเพื่อความชัวร์ ก่อนเรียก Sync ใหม่อีกรอบ
+            settings.themes.splice(index, 1);
+            await setDoc(doc(db, "config", "photobooth_settings"), settings, {merge: true});
+            
             await syncTemplatesFromStorage();
         };
 
@@ -492,9 +548,9 @@
             }
 
             if (sortOrder === "asc") {
-                filtered = [...filtered].sort((a,b) => a.dateObj - b.dateObj); // 🌟 เติมเครื่องหมายลบที่หายไปให้แล้วครับ
+                filtered = [...filtered].sort((a,b) => a.dateObj - b.dateObj);
             } else {
-                filtered = [...filtered].sort((a,b) => b.dateObj - a.dateObj); // 🌟 เติมเครื่องหมายลบที่หายไปให้แล้วครับ
+                filtered = [...filtered].sort((a,b) => b.dateObj - a.dateObj);
             }
             return filtered;
         }
