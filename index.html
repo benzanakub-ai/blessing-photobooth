@@ -574,7 +574,7 @@
                             for (let j = 0; j < CHROMA_TARGETS.length; j++) {
                                 const t = CHROMA_TARGETS[j];
                                 const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
-                                if (dist < 100) { // เจอสีเป้าหมาย
+                                if (dist < 150) { // เจอสีเป้าหมาย
                                     overlayData[i+3] = 0; // ปรับ Alpha เป็น 0 (ใสทะลุ) ทันที
                                     break;
                                 }
