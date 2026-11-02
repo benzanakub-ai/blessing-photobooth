@@ -535,7 +535,7 @@
                     }
 
                     const frames = [];
-                    const bleed = 30; // รูปลูกค้าขยายออกไป 30px
+                    const bleed = 30; 
                     
                     bounds.forEach(b => {
                         const w = b.maxX - b.minX + 1;
@@ -558,14 +558,30 @@
                     
                     frames.sort((a, b) => a.id - b.id);
 
-                    // 🌟 2. ลบสีชมพู และ "กินขอบ (Defringe)" 2 พิกเซล เพื่อลบขอบฟุ้งๆ ให้เกลี้ยง 🌟
+                    // 🌟 2. ลบสีชมพู/เขียว/ฟ้า เฉพาะบริเวณ "ข้างในกรอบ" เท่านั้น 🌟
                     const overlayDataObj = new ImageData(new Uint8ClampedArray(imgData), width, height);
                     const overlayData = overlayDataObj.data;
                     const transparentMask = new Uint8Array(width * height);
 
-                    // 2.1 มาร์คจุดที่เป็นสีเป้าหมาย
+                    // เช็คพิกเซลทั้งหมด
                     for (let y = 0; y < height; y++) {
                         for (let x = 0; x < width; x++) {
+                            
+                            // 🌟 ตรวจสอบก่อนว่า พิกเซลนี้ (x,y) ตกอยู่ในกรอบรูปอันไหนสักอันหรือเปล่า?
+                            let isInsideAnyFrame = false;
+                            for (let f of frames) {
+                                // ยอมให้กินขอบออกมานิดหน่อย (เผื่อขอบมันฟุ้ง)
+                                const margin = 10; 
+                                if (x >= f.x - margin && x <= (f.x + f.w + margin) && 
+                                    y >= f.y - margin && y <= (f.y + f.h + margin)) {
+                                    isInsideAnyFrame = true;
+                                    break;
+                                }
+                            }
+
+                            // 🌟 ถ้าไม่ได้อยู่ในกรอบเลย (เช่น ตัวหนังสือ BACK) ข้ามไปเลย ห้ามเจาะ!
+                            if (!isInsideAnyFrame) continue;
+
                             const i = (y * width + x) * 4;
                             const r = overlayData[i], g = overlayData[i+1], b = overlayData[i+2], a = overlayData[i+3];
                             
@@ -574,7 +590,7 @@
                                     const t = CHROMA_TARGETS[j];
                                     const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
                                     if (dist < 140) { 
-                                        transparentMask[y * width + x] = 1; // เจอสีเป้าหมาย มาร์คไว้
+                                        transparentMask[y * width + x] = 1; 
                                         break;
                                     }
                                 }
@@ -582,8 +598,7 @@
                         }
                     }
 
-                    // 2.2 ทำให้จุดที่มาร์คไว้โปร่งใส พร้อมทั้งขยายวงกินขอบ (Erode) เข้าไป 2 พิกเซล
-                    const erodeRadius = 2; // ระยะกินขอบ 2 พิกเซล จะลบสีจางๆ ออกได้หมดจด
+                    const erodeRadius = 2; 
                     for (let y = 0; y < height; y++) {
                         for (let x = 0; x < width; x++) {
                             if (transparentMask[y * width + x] === 1) {
@@ -593,7 +608,7 @@
                                         const nx = x + dx;
                                         if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
                                             const targetIdx = (ny * width + nx) * 4;
-                                            overlayData[targetIdx + 3] = 0; // ปรับให้ใสทะลุ 100%
+                                            overlayData[targetIdx + 3] = 0; 
                                         }
                                     }
                                 }
