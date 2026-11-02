@@ -508,7 +508,6 @@
                     const imgDataObj = ctx.getImageData(0, 0, width, height);
                     const imgData = imgDataObj.data;
 
-                    // 1. หาตำแหน่งช่องว่าง (หาบริเวณที่มีสีเขียว, ม่วง, หรือฟ้า)
                     const bounds = CHROMA_TARGETS.map(t => ({ 
                         id: t.id, target: t, minX: width, maxX: 0, minY: height, maxY: 0, count: 0 
                     }));
@@ -518,14 +517,12 @@
                             const idx = (y * width + x) * 4;
                             const r = imgData[idx], g = imgData[idx+1], b = imgData[idx+2], a = imgData[idx+3];
                             
-                            // มองข้ามพิกเซลที่โปร่งใสอยู่แล้ว
                             if (a < 100) continue; 
                             
                             for (let i = 0; i < CHROMA_TARGETS.length; i++) {
                                 const t = CHROMA_TARGETS[i];
                                 const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
-                                // ถ้าระยะห่างสีใกล้เคียงเป้าหมาย ให้จดจำพิกัดไว้
-                                if (dist < 80) { 
+                                if (dist < 100) { 
                                     bounds[i].minX = Math.min(bounds[i].minX, x);
                                     bounds[i].maxX = Math.max(bounds[i].maxX, x);
                                     bounds[i].minY = Math.min(bounds[i].minY, y);
@@ -538,8 +535,7 @@
                     }
 
                     const frames = [];
-                    // 🌟 เพิ่ม Bleed เยอะๆ ให้รูปขยายทะลุเข้าไปใต้กรอบได้เลย เพราะเราจะไม่กัดสีแหว่งแล้ว
-                    const bleed = 30; 
+                    const bleed = 30; // รูปลูกค้าขยายออกไป 30px
                     
                     bounds.forEach(b => {
                         const w = b.maxX - b.minX + 1;
@@ -548,7 +544,6 @@
                         
                         if (b.count > 10000 && w > 100 && h > 100) { 
                             const fillRatio = b.count / area;
-                            // ถ้าเจอช่องใหญ่พอ ให้จดพิกัดไว้สำหรับวาดรูป
                             if (fillRatio > 0.3) { 
                                 frames.push({ 
                                     id: b.id, 
@@ -563,20 +558,44 @@
                     
                     frames.sort((a, b) => a.id - b.id);
 
-                    // 🌟 2. สร้าง Overlay ใหม่ง่ายๆ โดยดูดพิกเซลสีเป้าหมายให้เป็น "ใส 100%" (Transparent) 🌟
-                    // ไม่ใช้การกัดขอบรอบๆ (Erode) แล้ว เพื่อรักษาลายกราฟิกดั้งเดิมไว้
+                    // 🌟 2. ลบสีชมพู และ "กินขอบ (Defringe)" 2 พิกเซล เพื่อลบขอบฟุ้งๆ ให้เกลี้ยง 🌟
                     const overlayDataObj = new ImageData(new Uint8ClampedArray(imgData), width, height);
                     const overlayData = overlayDataObj.data;
+                    const transparentMask = new Uint8Array(width * height);
 
-                    for (let i = 0; i < overlayData.length; i += 4) {
-                        const r = overlayData[i], g = overlayData[i+1], b = overlayData[i+2], a = overlayData[i+3];
-                        if (a > 50) { // พิจารณาเฉพาะส่วนที่ไม่ใส
-                            for (let j = 0; j < CHROMA_TARGETS.length; j++) {
-                                const t = CHROMA_TARGETS[j];
-                                const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
-                                if (dist < 150) { // เจอสีเป้าหมาย
-                                    overlayData[i+3] = 0; // ปรับ Alpha เป็น 0 (ใสทะลุ) ทันที
-                                    break;
+                    // 2.1 มาร์คจุดที่เป็นสีเป้าหมาย
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            const i = (y * width + x) * 4;
+                            const r = overlayData[i], g = overlayData[i+1], b = overlayData[i+2], a = overlayData[i+3];
+                            
+                            if (a > 50) { 
+                                for (let j = 0; j < CHROMA_TARGETS.length; j++) {
+                                    const t = CHROMA_TARGETS[j];
+                                    const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
+                                    if (dist < 140) { 
+                                        transparentMask[y * width + x] = 1; // เจอสีเป้าหมาย มาร์คไว้
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 2.2 ทำให้จุดที่มาร์คไว้โปร่งใส พร้อมทั้งขยายวงกินขอบ (Erode) เข้าไป 2 พิกเซล
+                    const erodeRadius = 2; // ระยะกินขอบ 2 พิกเซล จะลบสีจางๆ ออกได้หมดจด
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            if (transparentMask[y * width + x] === 1) {
+                                for (let dy = -erodeRadius; dy <= erodeRadius; dy++) {
+                                    for (let dx = -erodeRadius; dx <= erodeRadius; dx++) {
+                                        const ny = y + dy;
+                                        const nx = x + dx;
+                                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                                            const targetIdx = (ny * width + nx) * 4;
+                                            overlayData[targetIdx + 3] = 0; // ปรับให้ใสทะลุ 100%
+                                        }
+                                    }
                                 }
                             }
                         }
