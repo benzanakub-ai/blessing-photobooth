@@ -491,6 +491,7 @@
             }
         }
 
+        // 🌟 ปรับระบบวิเคราะห์เทมเพลตใหม่สำหรับตู้ 2x6 (ปิดระบบกัดสี ใช้ความใสของ PNG ล้วนๆ) 🌟
         function analyzeAndProcessTemplate(imageSrc) {
             return new Promise((resolve) => {
                 const img = new Image(); img.crossOrigin = "anonymous";
@@ -506,10 +507,8 @@
 
                     const imgDataObj = ctx.getImageData(0, 0, width, height);
                     const imgData = imgDataObj.data;
-                    
-                    const overlayDataObj = new ImageData(new Uint8ClampedArray(imgData), width, height);
-                    const overlayData = overlayDataObj.data;
 
+                    // 1. หาตำแหน่งช่องว่าง (หาบริเวณที่มีสีเขียว, ม่วง, หรือฟ้า)
                     const bounds = CHROMA_TARGETS.map(t => ({ 
                         id: t.id, target: t, minX: width, maxX: 0, minY: height, maxY: 0, count: 0 
                     }));
@@ -518,12 +517,15 @@
                         for (let x = 0; x < width; x++) {
                             const idx = (y * width + x) * 4;
                             const r = imgData[idx], g = imgData[idx+1], b = imgData[idx+2], a = imgData[idx+3];
+                            
+                            // มองข้ามพิกเซลที่โปร่งใสอยู่แล้ว
                             if (a < 100) continue; 
                             
                             for (let i = 0; i < CHROMA_TARGETS.length; i++) {
                                 const t = CHROMA_TARGETS[i];
                                 const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
-                                if (dist < 45) { 
+                                // ถ้าระยะห่างสีใกล้เคียงเป้าหมาย ให้จดจำพิกัดไว้
+                                if (dist < 80) { 
                                     bounds[i].minX = Math.min(bounds[i].minX, x);
                                     bounds[i].maxX = Math.max(bounds[i].maxX, x);
                                     bounds[i].minY = Math.min(bounds[i].minY, y);
@@ -536,16 +538,18 @@
                     }
 
                     const frames = [];
-                    const bleed = 20; 
+                    // 🌟 เพิ่ม Bleed เยอะๆ ให้รูปขยายทะลุเข้าไปใต้กรอบได้เลย เพราะเราจะไม่กัดสีแหว่งแล้ว
+                    const bleed = 30; 
                     
                     bounds.forEach(b => {
                         const w = b.maxX - b.minX + 1;
                         const h = b.maxY - b.minY + 1;
                         const area = w * h;
                         
-                        if (b.count > 20000 && w > 100 && h > 100) { 
+                        if (b.count > 10000 && w > 100 && h > 100) { 
                             const fillRatio = b.count / area;
-                            if (fillRatio > 0.4) { 
+                            // ถ้าเจอช่องใหญ่พอ ให้จดพิกัดไว้สำหรับวาดรูป
+                            if (fillRatio > 0.3) { 
                                 frames.push({ 
                                     id: b.id, 
                                     x: b.minX - bleed, 
@@ -553,51 +557,30 @@
                                     w: w + (bleed * 2), 
                                     h: h + (bleed * 2) 
                                 });
-
-                                const searchPadding = 10;
-                                const startX = Math.max(0, b.minX - searchPadding);
-                                const endX = Math.min(width, b.maxX + searchPadding);
-                                const startY = Math.max(0, b.minY - searchPadding);
-                                const endY = Math.min(height, b.maxY + searchPadding);
-
-                                for (let y = startY; y <= endY; y++) {
-                                    for (let x = startX; x <= endX; x++) {
-                                        const idx = (y * width + x) * 4;
-                                        const r = imgData[idx], g = imgData[idx+1], b_color = imgData[idx+2];
-                                        const t = b.target;
-                                        const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b_color-t.b)**2);
-                                        
-                                        if (dist < 90) {
-                                            // ลบพิกเซลให้โปร่งใส (เจาะช่อง)
-                                            overlayData[idx + 3] = 0; 
-                                        }
-                                    }
-                                }
-                                
-                                // ลบขอบให้เนียนขึ้น
-                                const erodeRadius = 4;
-                                for (let y = startY; y <= endY; y++) {
-                                    for (let x = startX; x <= endX; x++) {
-                                        const checkIdx = (y * width + x) * 4;
-                                        if (overlayData[checkIdx + 3] === 0) {
-                                            for(let dy = -erodeRadius; dy <= erodeRadius; dy++) {
-                                                for(let dx = -erodeRadius; dx <= erodeRadius; dx++) {
-                                                    const ny = y + dy;
-                                                    const nx = x + dx;
-                                                    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                                                        const targetIdx = (ny * width + nx) * 4;
-                                                        overlayData[targetIdx + 3] = 0; 
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }); 
                     
                     frames.sort((a, b) => a.id - b.id);
+
+                    // 🌟 2. สร้าง Overlay ใหม่ง่ายๆ โดยดูดพิกเซลสีเป้าหมายให้เป็น "ใส 100%" (Transparent) 🌟
+                    // ไม่ใช้การกัดขอบรอบๆ (Erode) แล้ว เพื่อรักษาลายกราฟิกดั้งเดิมไว้
+                    const overlayDataObj = new ImageData(new Uint8ClampedArray(imgData), width, height);
+                    const overlayData = overlayDataObj.data;
+
+                    for (let i = 0; i < overlayData.length; i += 4) {
+                        const r = overlayData[i], g = overlayData[i+1], b = overlayData[i+2], a = overlayData[i+3];
+                        if (a > 50) { // พิจารณาเฉพาะส่วนที่ไม่ใส
+                            for (let j = 0; j < CHROMA_TARGETS.length; j++) {
+                                const t = CHROMA_TARGETS[j];
+                                const dist = Math.sqrt((r-t.r)**2 + (g-t.g)**2 + (b-t.b)**2);
+                                if (dist < 100) { // เจอสีเป้าหมาย
+                                    overlayData[i+3] = 0; // ปรับ Alpha เป็น 0 (ใสทะลุ) ทันที
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
                     const overlayCanvas = document.createElement('canvas');
                     overlayCanvas.width = width; overlayCanvas.height = height;
@@ -848,7 +831,7 @@
             });
         }
 
-            function drawStripLayout(ctx, cleanCtx, stripCanvas, cleanCanvas, images) {
+    function drawStripLayout(ctx, cleanCtx, stripCanvas, cleanCanvas, images) {
             const width = state.activeTemplateInfo.width; 
             const height = state.activeTemplateInfo.height; 
             
