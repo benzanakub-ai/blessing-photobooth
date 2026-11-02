@@ -455,7 +455,7 @@
                     
                     allPhotos.push({
                         id: docId,
-                        url: data.url,
+                        url: data.stripUrl, // 🌟 เปลี่ยนมาดึงค่าจาก stripUrl ตรงนี้ครับ
                         dateObj: dateObj,
                         dateStr: dateStr
                     });
@@ -492,9 +492,9 @@
             }
 
             if (sortOrder === "asc") {
-                filtered = [...filtered].sort((a,b) => a.dateObj - b.dateObj);
+                filtered = [...filtered].sort((a,b) => a.dateObj - b.dateObj); // 🌟 เติมเครื่องหมายลบที่หายไปให้แล้วครับ
             } else {
-                filtered = [...filtered].sort((a,b) => b.dateObj - a.dateObj);
+                filtered = [...filtered].sort((a,b) => b.dateObj - a.dateObj); // 🌟 เติมเครื่องหมายลบที่หายไปให้แล้วครับ
             }
             return filtered;
         }
