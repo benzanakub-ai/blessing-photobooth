@@ -930,16 +930,16 @@
                 const baseFileName = `photobooth_${Date.now()}`;
                 const uploadPromises = [];
                 
-                // 1. อัปโหลดภาพรวม (Strip 2x6)
+                // 1. อัปโหลดภาพรวม (Strip 2x6) 🌟 นำไปเก็บไว้ในโฟลเดอร์ print/
                 const stripDataUrl = cleanCanvas.toDataURL('image/jpeg', 0.85);
-                const stripRef = ref(storage, `photobooth_photos/${baseFileName}_strip.jpg`);
+                const stripRef = ref(storage, `photobooth_photos/print/${baseFileName}_strip.jpg`);
                 uploadPromises.push(
                     uploadString(stripRef, stripDataUrl, 'data_url').then(s => getDownloadURL(s.ref))
                 );
 
-                // 2. อัปโหลดภาพเดี่ยว (Originals 16:9) ทีละรูป
+                // 2. อัปโหลดภาพเดี่ยว (Originals 16:9) ทีละรูป 🌟 นำไปเก็บไว้ในโฟลเดอร์ original/
                 state.capturedPhotos.forEach((photoDataUrl, index) => {
-                    const originalRef = ref(storage, `photobooth_photos/${baseFileName}_orig_${index + 1}.jpg`);
+                    const originalRef = ref(storage, `photobooth_photos/original/${baseFileName}_orig_${index + 1}.jpg`);
                     uploadPromises.push(
                         uploadString(originalRef, photoDataUrl, 'data_url').then(s => getDownloadURL(s.ref))
                     );
@@ -957,7 +957,7 @@
                     createdAt: serverTimestamp() 
                 });
 
-                // 🌟 สร้างลิงก์ไปหน้า Share ใหม่ (เดี๋ยวเราจะสร้างไฟล์ share_photobooth.html กัน)
+                // 🌟 สร้างลิงก์ไปหน้า Share
                 let baseUrl = window.location.origin + window.location.pathname;
                 if (baseUrl.endsWith('index.html')) baseUrl = baseUrl.replace('/index.html', '');
                 if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
